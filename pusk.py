@@ -201,7 +201,7 @@ tiles_images = {
     (146, 94, 70): [load_image('tiles/wall_blocks/yellow-stone-wall1.png'),
                     load_image('tiles/wall_blocks/yellow-stone-wall2.png')],
 }
-base_pixel = image_to_list('data/maps/map_tmp.png')[0][0]  # если не знаем какой это пиксель, берём этот
+base_pixel = image_to_list('data/maps/map_1.png')[0][0]  # если не знаем какой это пиксель, берём этот
 
 player_image = pygame.transform.scale(load_image('units/alpha.png'), (44, 40))
 player, level_x, level_y = generate_level(image_to_list('data/maps/map_1.png'))
