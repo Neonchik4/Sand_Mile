@@ -87,7 +87,6 @@ class Player(pygame.sprite.Sprite):
     def rotate_towards_mouse(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         rel_x, rel_y = mouse_x - (self.x + self.rect[2] // 3), mouse_y - (self.y + self.rect[3] // 3)
-        print(mouse_x, mouse_y)
         if ((mouse_x < 456 or mouse_x > 504) or (mouse_y > 501 or mouse_y < 459)) and mouse_y != 391 and mouse_y != 512:
             angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
             self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
