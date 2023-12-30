@@ -3,7 +3,6 @@ import os
 import sys
 import random
 import math
-from pygame.math import Vector2
 
 
 def terminate():
@@ -81,18 +80,18 @@ class Player(pygame.sprite.Sprite):
         super().__init__(player_group, all_sprites)
         self.x = pos_x
         self.y = pos_y
-        self.angle = None
         self.image = player_image
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x + 15, tile_height * pos_y + 5)
+        self.rect = self.image.get_rect()
         self.orig = self.image
 
     def rotate_towards_mouse(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        rel_x, rel_y = mouse_x - self.x, mouse_y - self.y
-        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
-        self.rect = self.image.get_rect(center=self.rect.center)
+        rel_x, rel_y = mouse_x - (self.x + self.rect[2] // 3), mouse_y - (self.y + self.rect[3] // 3)
+        print(mouse_x, mouse_y)
+        if ((mouse_x < 456 or mouse_x > 504) or (mouse_y > 501 or mouse_y < 459)) and mouse_y != 391 and mouse_y != 512:
+            angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+            self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+            self.rect = self.image.get_rect(center=self.rect.center)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -110,7 +109,7 @@ screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
 
-tile_width = tile_height = 50
+tile_width = tile_height = 32
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
@@ -121,7 +120,6 @@ FPS = 50
 player_image = pygame.transform.scale(load_image('units/alpha.png'), (44, 40))
 cursor = pygame.image.load('data/cursor.png')
 player = Player(WIDTH // 2 - 22, HEIGHT // 2 - 20)
-
 start_screen()
 
 while True:
