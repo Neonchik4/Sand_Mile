@@ -18,13 +18,16 @@ def generate_level(level):
     new_player, x, y = None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
-            if level[y][x] in tiles_images:
-                Tile(level[y][x], x, y)
-            elif level[y][x] == (136, 0, 21):  # r, g, b игрока
-                Tile(player_pixel, x, y)
-                new_player = (x, y)
-            elif level[y][x] != (255, 0, 0):
-                Tile(random.choice(default_pixels), x, y)
+            if x != 0 and y != 0:
+                if level[y][x] in tiles_images:
+                    Tile(level[y][x], x, y)
+                elif level[y][x] == (136, 0, 21):  # r, g, b игрокаsss
+                    Tile(player_pixel, x, y)
+                    new_player = (x, y)
+                elif level[y][x] != (255, 0, 0):
+                    Tile(random.choice(default_pixels), x, y)
+            else:
+                Tile((0, 0, 0), x, y)
     # вернем игрока, а также размер поля в клетках
     return *new_player, x, y
 
@@ -278,7 +281,7 @@ tiles_images = {
 # если не знаем какой это пиксель, берём случайный из этих
 default_pixels = [(127, 127, 127), (120, 120, 120), (60, 56, 56)]
 # пиксель под игрока
-player_pixel = (127, 127, 127)
+player_pixel = image_to_list('data/maps/snow_map_2.png')[0][0]
 
 # ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
 # (136, 0, 21): player
