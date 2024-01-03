@@ -18,22 +18,15 @@ def generate_level(level):
     new_player, x, y = None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
-            # if level[y][x] == '.':
-            #     Tile('empty', x, y)
-            # elif level[y][x] == '#':
-            #     Tile('wall', x, y)
-            # elif level[y][x] == '@':
-            #     Tile('empty', x, y)
-            #     new_player = Player(x, y)
             if level[y][x] in tiles_images:
                 Tile(level[y][x], x, y)
-            elif level[y][x] == (136, 0, 21):
-                Tile(base_pixel, x, y)
-                new_player = Player(x, y)
-            else:
-                Tile(base_pixel, x, y)
+            elif level[y][x] == (136, 0, 21):  # r, g, b игрока
+                Tile(player_pixel, x, y)
+                new_player = (x, y)
+            elif level[y][x] != (255, 0, 0):
+                Tile(random.choice(default_pixels), x, y)
     # вернем игрока, а также размер поля в клетках
-    return new_player, x, y
+    return *new_player, x, y
 
 
 def terminate():
@@ -67,7 +60,7 @@ def start_screen():
 
     fon = pygame.transform.scale(load_image('logo.png'), (674, 107))
     screen.blit(fon, (WIDTH // 2 - 337, 0))
-    font = pygame.font.Font(None, 30)
+    font = pygame.font.Font(None, 25)
     text_coord = 75
     for line in intro_text:
         string_rendered = font.render(line, 1, pygame.Color('black'))
@@ -112,6 +105,7 @@ class Player(pygame.sprite.Sprite):
         self.x = pos_x * tile_width
         self.y = pos_y * tile_height
         self.image = player_image
+        self.hp = 100
         self.rect = self.image.get_rect().move(self.x, self.y)
         # print(self.x, self.y)
         # print()
@@ -138,9 +132,83 @@ class Tile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
 
 
-pygame.init()
+class DJ:
+    def __init__(self):
+        # None означает, что ничего не надо проигрывать
+        self.drill_sound = pygame.mixer.Sound("data/sounds/drill_idle.wav")
+        self.play_drill_sound = None
+        self.conveyor_sound = pygame.mixer.Sound("data/sounds/conveyorbelt_idle.wav")
+        self.play_conveyor_sound = None
 
-size = WIDTH, HEIGHT = 960, 960
+        self.soundtracks = [pygame.mixer.Sound("data/sounds/sandmile_ambient_1_dark.wav")]
+        self.index_of_sound = None
+
+    def update(self):
+        # звук дрели
+        if self.play_drill_sound:
+            self.drill_sound.play(loops=-1)
+            self.drill_sound.set_volume(0.95)
+            self.play_drill_sound = None
+        if not self.drill_sound:
+            self.drill_sound.stop()
+
+        # звук конвейера
+        if self.play_conveyor_sound:
+            self.conveyor_sound.play(loops=-1)
+            self.play_conveyor_sound = None
+        if not self.conveyor_sound:
+            self.conveyor_sound.stop()
+
+        # саундтреки
+        if self.index_of_sound is not None:
+            soundtrack.play(self.soundtracks[self.index_of_sound], loops=1)
+            soundtrack.set_volume(0.75)
+            self.index_of_sound = None
+
+
+def frame_positions(pos1, pos2, pos3, *pos_mouse):
+    mouse_x, mouse_y = pos_mouse
+    # задействуем правую часть меню
+    if 214 <= mouse_x <= 309 and 710 <= mouse_y <= 955:
+        if 214 <= mouse_x <= 263 and 710 <= mouse_y <= 760:
+            # frame на турель
+            pos1 = (214, 710)
+            blocks_type = 'turrets'
+        elif 214 <= mouse_x <= 263 and 761 <= mouse_y <= 801:
+            # frame на конвеер
+            pos1 = (214, 761)
+            blocks_type = 'conveyors'
+        elif 264 <= mouse_x <= 309 and 710 <= mouse_y <= 760:
+            # frame на бур
+            pos1 = (264, 710)
+            blocks_type = 'drills'
+        elif 214 <= mouse_x <= 263 and 863 <= mouse_y <= 903:
+            # frame на завод
+            pos1 = (214, 863)
+            blocks_type = 'factories'
+        elif 264 <= mouse_x <= 309 and 810 <= mouse_y <= 862:
+            pos1 = (264, 810)
+            blocks_type = 'defensive_walls'
+        elif 264 <= mouse_x <= 309 and 863 <= mouse_y <= 913:
+            pos1 = (264, 863)
+            blocks_type = 'drone factories'
+
+    # задействуем нижнюю левую часть меню
+    if 4 <= mouse_x <= 209 and 906 <= mouse_y <= 956:
+        if 4 <= mouse_x <= 54:
+            # frame на значок размещения блоков
+            pos2 = (4, 906)
+        elif 55 <= mouse_x <= 105:
+            # frame на значок уничтожения блоков
+            pos2 = (55, 906)
+
+    return pos1, pos2, pos3
+
+
+pygame.init()
+pygame.mixer.init()
+
+size = WIDTH, HEIGHT = 1280, 960
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -150,16 +218,22 @@ all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 camera = Camera()
-STEP = 50
+STEP = 8
 FPS = 50
 
-# Player(WIDTH // 2 - 22, HEIGHT // 2 - 20)
 cursor = pygame.image.load('data/cursor.png')
-# (136, 0, 21): player
-# цвет игрока обязан присутствовать на поле
+menu = pygame.image.load('data/menu/item_menu.png')
+right_frame = pygame.image.load('data/menu/frame.png')
+top_left_frame = pygame.image.load('data/menu/frame.png')
+bottom_left_frame = pygame.image.load('data/menu/frame.png')
+right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
+blocks_type = None
+
+# r, g, b для каждого tile
 tiles_images = {
     # ground blocks
     (0, 0, 0): load_image('tiles/ground/black_tile.png'),
+    (232, 120, 0): load_image('cores/core_1.png'),
     (127, 127, 127): [load_image('tiles/ground/basalt_1.png'), load_image('tiles/ground/basalt_2.png'),
                       load_image('tiles/ground/basalt_3.png')],
     (255, 128, 255): [load_image('tiles/ground/bluemat1.png'), load_image('tiles/ground/bluemat2.png'),
@@ -201,38 +275,71 @@ tiles_images = {
     (146, 94, 70): [load_image('tiles/wall_blocks/yellow-stone-wall1.png'),
                     load_image('tiles/wall_blocks/yellow-stone-wall2.png')],
 }
-base_pixel = image_to_list('data/maps/map_1.png')[0][0]  # если не знаем какой это пиксель, берём этот
+# если не знаем какой это пиксель, берём случайный из этих
+default_pixels = [(127, 127, 127), (120, 120, 120), (60, 56, 56)]
+# пиксель под игрока
+player_pixel = (127, 127, 127)
 
+# ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
+# (136, 0, 21): player
+# цвет игрока обязан присутствовать на поле
+# (255, 0, 0): blocked
 player_image = pygame.transform.scale(load_image('units/alpha.png'), (44, 40))
-player, level_x, level_y = generate_level(image_to_list('data/maps/map_1.png'))
-
+player_x, player_y, level_x, level_y = generate_level(image_to_list('data/maps/snow_map_2.png'))
+player = Player(player_x, player_y)
+dj = DJ()
+pygame.mixer.set_num_channels(10)
+soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
 while True:
     screen.fill((0, 0, 0))
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT:
-                player.rect.x += STEP
-            if event.key == pygame.K_UP:
-                player.rect.y -= STEP
-            if event.key == pygame.K_DOWN:
-                player.rect.y += STEP
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
+            right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
+                                                                                         top_left_frame_pos,
+                                                                                         bottom_left_frame_pos,
+                                                                                         *pygame.mouse.get_pos())
+
+    # перемещение персонажа
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_a]:
+        for i in range(5):
+            player.rect.x -= STEP // 5
+    if keys[pygame.K_d]:
+        for i in range(5):
+            player.rect.x += STEP // 5
+    if keys[pygame.K_w]:
+        for i in range(5):
+            player.rect.y -= STEP // 5
+    if keys[pygame.K_s]:
+        for i in range(5):
+            player.rect.y += STEP // 5
+
+    tmp = random.randrange(0, 5000)
+    if tmp == 1 and not soundtrack.get_busy():
+        dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
+    dj.update()
 
     # изменяем ракурс камеры
     camera.update(player)
     # обновляем положение всех спрайтов
     for sprite in all_sprites:
         camera.apply(sprite)
-
     tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
+
+    # тут рисуем меню
+    screen.blit(menu, (0, 706))
+    if right_frame_pos is not None:
+        screen.blit(right_frame, right_frame_pos)
+    if top_left_frame_pos is not None:
+        screen.blit(top_left_frame, top_left_frame_pos)
+    if bottom_left_frame_pos is not None:
+        screen.blit(bottom_left_frame, bottom_left_frame_pos)
 
     x, y = pygame.mouse.get_pos()
     if pygame.mouse.get_focused():
