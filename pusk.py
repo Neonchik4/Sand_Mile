@@ -15,7 +15,8 @@ def image_to_list(file_name):
 
 
 def generate_level(level):
-    new_player, x, y = None, None, None
+    new_player, lvl_x, lvl_y = None, None, None
+    resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
     for y in range(len(level)):
         for x in range(len(level[y])):
             if x != 0 and y != 0:
@@ -25,11 +26,18 @@ def generate_level(level):
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
                 elif level[y][x] != (255, 0, 0):
-                    Tile(random.choice(default_pixels), x, y)
+                    Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
+
+    for j in range(len(resource_map)):
+        for i in range(len(resource_map[j])):
+            if resource_map[j][i] != (255, 255, 255) and resource_map[j][i] in ores_images.keys():
+                ResourceTile(resource_map[j][i], i, j)
+                board.resource_map[j][i] = ores_to_str[resource_map[j][i]]
+
     # вернем игрока, а также размер поля в клетках
-    return *new_player, x, y
+    return *new_player, lvl_x, lvl_y
 
 
 def terminate():
@@ -142,6 +150,17 @@ class Tile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
 
 
+class ResourceTile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(resource_tiles_group, all_sprites)
+        self.image = None
+        if type(ores_images[tile_type]) == list:  # по неведомой причине через is не работает
+            self.image = random.choice(ores_images[tile_type])
+        else:
+            self.image = ores_images[tile_type]
+        self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
+
+
 class DJ:
     def __init__(self):
         # None означает, что ничего не надо проигрывать
@@ -174,6 +193,16 @@ class DJ:
             soundtrack.play(self.soundtracks[self.index_of_sound], loops=1)
             soundtrack.set_volume(0.75)
             self.index_of_sound = None
+
+
+class Board:
+    def __init__(self):
+        # industry map отвечает за расположение логистических блоков (каждый блок занимает несколько клеток)
+        self.industry_map = None
+        # тоже самое, только каждый блок занимает одну клетку во избежание повторного отрисовывания
+        self.industry_map_to_drawing = None
+        # Карта ресурсов
+        self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
@@ -226,6 +255,7 @@ clock = pygame.time.Clock()
 tile_width = tile_height = 32
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+resource_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 camera = Camera()
 STEP = 8
@@ -287,8 +317,42 @@ tiles_images = {
 }
 # если не знаем какой это пиксель, берём случайный из этих
 default_pixels = [(127, 127, 127), (120, 120, 120), (60, 56, 56)]
+# словарь цветов для руд
+ores_images = {
+    (0, 0, 0): [load_image('ores/coal/coal_1.png'), load_image('ores/coal/coal_2.png'),
+                load_image('ores/coal/coal_3.png')],
+    (174, 124, 91): [load_image('ores/copper/copper_1.png'), load_image('ores/copper/copper_2.png'),
+                     load_image('ores/copper/copper_3.png')],
+    (142, 133, 162): [load_image('ores/lead/lead_1.png'), load_image('ores/lead/lead_2.png'),
+                      load_image('ores/lead/lead_3.png')],
+    (155, 146, 139): [load_image('ores/scrap/scrap_1.png'), load_image('ores/scrap/scrap_2.png'),
+                      load_image('ores/scrap/scrap_3.png')],
+    (205, 159, 207): [load_image('ores/thorium/thorium_1.png'), load_image('ores/thorium/thorium_2.png'),
+                      load_image('ores/thorium/thorium_3.png')],
+    (120, 141, 207): [load_image('ores/titanium/titanium_1.png'), load_image('ores/titanium/titanium_2.png'),
+                      load_image('ores/titanium/titanium_3.png')],
+
+    # здесь для неудобства лежит ключ спауна юнитов
+    (255, 0, 128): load_image('spawn_mark.png')
+}
+# словарь по переводу r, g, b в строки
+ores_to_str = {
+    (0, 0, 0): 'coal',
+    (174, 124, 91): 'copper',
+    (142, 133, 162): 'lead',
+    (155, 146, 139): 'scrap',
+    (205, 159, 207): 'thorium',
+    (120, 141, 207): 'titanium',
+    (255, 0, 128): 'spawn_mark'
+}
 # пиксель под игрока
-player_pixel = image_to_list('data/maps/snow_map_2.png')[0][0]
+player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
+map_name = 'data/maps/snow_map_1.png'
+lst_map = image_to_list(map_name)
+
+dj = DJ()
+# представления о игровой доске
+board = Board()
 
 # ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
 # (136, 0, 21): player
@@ -296,9 +360,9 @@ player_pixel = image_to_list('data/maps/snow_map_2.png')[0][0]
 # (255, 0, 0): blocked
 player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
 player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
-player_x, player_y, level_x, level_y = generate_level(image_to_list('data/maps/snow_map_2.png'))
+player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
-dj = DJ()
+
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
@@ -346,6 +410,7 @@ while True:
     for sprite in all_sprites:
         camera.apply(sprite)
     tiles_group.draw(screen)
+    resource_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
 
