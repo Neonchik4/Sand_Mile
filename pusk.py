@@ -29,13 +29,14 @@ def generate_level(level):
                     Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
+            if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
+                board.resource_map[y][x] = 'sand'
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
             if resource_map[j][i] != (255, 255, 255) and resource_map[j][i] in ores_images.keys():
                 ResourceTile(resource_map[j][i], i, j)
                 board.resource_map[j][i] = ores_to_str[resource_map[j][i]]
-
     # вернем игрока, а также размер поля в клетках
     return *new_player, lvl_x, lvl_y
 
