@@ -22,7 +22,7 @@ def generate_level(level):
             if x != 0 and y != 0:
                 if level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
-                elif level[y][x] == (136, 0, 21):  # r, g, b игрокаsss
+                elif level[y][x] == (136, 0, 21):  # r, g, b игрока
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
                 elif level[y][x] != (255, 0, 0):
