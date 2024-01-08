@@ -108,6 +108,7 @@ class Player(pygame.sprite.Sprite):
         self.x = pos_x * tile_width
         self.y = pos_y * tile_height
         self.image = player_image
+        self.is_in_motion = False
         self.hp = 100
         self.rect = self.image.get_rect().move(self.x, self.y)
         # print(self.x, self.y)
@@ -122,6 +123,12 @@ class Player(pygame.sprite.Sprite):
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
         self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
         self.rect = self.image.get_rect(center=self.rect.center)
+
+    def update(self):
+        if self.is_in_motion:
+            self.orig = player_image_in_move
+        else:
+            self.orig = player_image
 
 
 class Tile(pygame.sprite.Sprite):
@@ -287,7 +294,8 @@ player_pixel = image_to_list('data/maps/snow_map_2.png')[0][0]
 # (136, 0, 21): player
 # цвет игрока обязан присутствовать на поле
 # (255, 0, 0): blocked
-player_image = pygame.transform.scale(load_image('units/alpha.png'), (44, 40))
+player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
+player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
 player_x, player_y, level_x, level_y = generate_level(image_to_list('data/maps/snow_map_2.png'))
 player = Player(player_x, player_y)
 dj = DJ()
@@ -307,19 +315,25 @@ while True:
                                                                                          *pygame.mouse.get_pos())
 
     # перемещение персонажа
+    player.is_in_motion = False
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
+        player.is_in_motion = True
         for i in range(5):
             player.rect.x -= STEP // 5
     if keys[pygame.K_d]:
+        player.is_in_motion = True
         for i in range(5):
             player.rect.x += STEP // 5
     if keys[pygame.K_w]:
+        player.is_in_motion = True
         for i in range(5):
             player.rect.y -= STEP // 5
     if keys[pygame.K_s]:
+        player.is_in_motion = True
         for i in range(5):
             player.rect.y += STEP // 5
+    player.update()
 
     tmp = random.randrange(0, 5000)
     if tmp == 1 and not soundtrack.get_busy():
