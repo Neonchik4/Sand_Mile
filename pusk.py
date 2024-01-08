@@ -65,6 +65,7 @@ def load_image(name, colorkey=None):
 
 def start_screen():
     screen.fill((125, 125, 125))
+    # Не трогать пустую строку - это отступ от заставки
     intro_text = ['',
                   "Правила игры:",
                   "Здесь пока что карта не загружена - находится в процессе разработки",
@@ -207,6 +208,7 @@ class Board:
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
+    global destroy, build, blocks_type, type_of_current_block
     mouse_x, mouse_y = pos_mouse
     # задействуем правую часть меню
     if 214 <= mouse_x <= 309 and 710 <= mouse_y <= 955:
@@ -233,14 +235,30 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             pos1 = (264, 863)
             blocks_type = 'drone factories'
 
+    # задействуем левую верхнюю часть меню (также выбор текущего блока)
+    if blocks_type == 'drills':
+        if 4 <= mouse_x <= 54 and 710 <= mouse_y <= 760:
+            type_of_current_block = 'mechanical drill'
+            pos2 = (4, 710)
+        elif 55 <= mouse_x <= 105 and 710 <= mouse_y <= 760:
+            type_of_current_block = 'pneumatic drill'
+            pos2 = (55, 710)
+
     # задействуем нижнюю левую часть меню
     if 4 <= mouse_x <= 209 and 906 <= mouse_y <= 956:
         if 4 <= mouse_x <= 54:
-            # frame на значок размещения блоков
-            pos2 = (4, 906)
+            build = not build
+            destroy = False
         elif 55 <= mouse_x <= 105:
-            # frame на значок уничтожения блоков
-            pos2 = (55, 906)
+            destroy = not destroy
+            build = False
+
+        if destroy:  # frame на значок уничтожения блоков
+            pos3 = (55, 906)
+        elif build:  # frame на строение блоков
+            pos3 = (4, 906)
+        else:
+            pos3 = None
 
     return pos1, pos2, pos3
 
@@ -254,21 +272,23 @@ pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
 
 tile_width = tile_height = 32
+STEP = 7
+FPS = 50
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 resource_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
-camera = Camera()
-STEP = 8
-FPS = 50
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
 right_frame = pygame.image.load('data/menu/frame.png')
 top_left_frame = pygame.image.load('data/menu/frame.png')
 bottom_left_frame = pygame.image.load('data/menu/frame.png')
+drills_image = pygame.image.load('data/menu/menu_drills.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
+type_of_current_block = None
+build, destroy = False, False
 
 # r, g, b для каждого tile
 tiles_images = {
@@ -348,12 +368,14 @@ ores_to_str = {
 }
 # пиксель под игрока
 player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
+# Для работы с картами
 map_name = 'data/maps/snow_map_1.png'
 lst_map = image_to_list(map_name)
 
 dj = DJ()
 # представления о игровой доске
 board = Board()
+camera = Camera()
 
 # ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
 # (136, 0, 21): player
@@ -384,20 +406,24 @@ while True:
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         player.is_in_motion = True
+        player.x -= STEP
         for i in range(5):
-            player.rect.x -= STEP // 5
+            player.rect.x -= STEP / 5
     if keys[pygame.K_d]:
         player.is_in_motion = True
+        player.x += STEP
         for i in range(5):
-            player.rect.x += STEP // 5
+            player.rect.x += STEP / 5
     if keys[pygame.K_w]:
         player.is_in_motion = True
+        player.y -= STEP
         for i in range(5):
-            player.rect.y -= STEP // 5
+            player.rect.y -= STEP / 5
     if keys[pygame.K_s]:
         player.is_in_motion = True
+        player.y += STEP
         for i in range(5):
-            player.rect.y += STEP // 5
+            player.rect.y += STEP / 5
     player.update()
 
     tmp = random.randrange(0, 5000)
@@ -417,6 +443,9 @@ while True:
 
     # тут рисуем меню
     screen.blit(menu, (0, 706))
+    if blocks_type == 'drills':
+        screen.blit(drills_image, (4, HEIGHT - 250))
+
     if right_frame_pos is not None:
         screen.blit(right_frame, right_frame_pos)
     if top_left_frame_pos is not None:
