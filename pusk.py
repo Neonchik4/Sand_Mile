@@ -37,6 +37,8 @@ def generate_level(level):
             if resource_map[j][i] != (255, 255, 255) and resource_map[j][i] in ores_images.keys():
                 ResourceTile(resource_map[j][i], i, j)
                 board.resource_map[j][i] = ores_to_str[resource_map[j][i]]
+            if resource_map[j][i] == (255, 0, 128):
+                board.industry_map[j][i] = ores_to_str[resource_map[j][i]]
     # вернем игрока, а также размер поля в клетках
     return *new_player, lvl_x, lvl_y
 
@@ -178,7 +180,7 @@ class DJ:
         # звук дрели
         if self.play_drill_sound:
             self.drill_sound.play(loops=-1)
-            self.drill_sound.set_volume(0.95)
+            self.drill_sound.set_volume(0.75)
             self.play_drill_sound = None
         if not self.drill_sound:
             self.drill_sound.stop()
@@ -199,10 +201,10 @@ class DJ:
 
 class Board:
     def __init__(self):
-        # industry map отвечает за расположение логистических блоков (каждый блок занимает несколько клеток)
-        self.industry_map = None
+        # industry map отвечает за расположение логистических блоков (каждый блок занимает несколько клеток)030
+        self.industry_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
         # тоже самое, только каждый блок занимает одну клетку во избежание повторного отрисовывания
-        self.industry_map_to_drawing = None
+        self.industry_map_to_drawing = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
         # Карта ресурсов
         self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
@@ -210,42 +212,44 @@ class Board:
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
     mouse_x, mouse_y = pos_mouse
+    print(mouse_x, mouse_y)
+    print(HEIGHT)
     # задействуем правую часть меню
-    if 214 <= mouse_x <= 309 and 710 <= mouse_y <= 955:
-        if 214 <= mouse_x <= 263 and 710 <= mouse_y <= 760:
+    if 214 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 5:
+        if 214 <= mouse_x <= 263 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             # frame на турель
-            pos1 = (214, 710)
+            pos1 = (214, HEIGHT - 250)
             blocks_type = 'turrets'
-        elif 214 <= mouse_x <= 263 and 761 <= mouse_y <= 801:
+        elif 214 <= mouse_x <= 263 and HEIGHT - 199 <= mouse_y <= HEIGHT - 159:
             # frame на конвеер
-            pos1 = (214, 761)
+            pos1 = (214, HEIGHT - 199)
             blocks_type = 'conveyors'
-        elif 264 <= mouse_x <= 309 and 710 <= mouse_y <= 760:
+        elif 264 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             # frame на бур
-            pos1 = (264, 710)
+            pos1 = (264, HEIGHT - 250)
             blocks_type = 'drills'
-        elif 214 <= mouse_x <= 263 and 863 <= mouse_y <= 903:
+        elif 214 <= mouse_x <= 263 and HEIGHT - 97 <= mouse_y <= HEIGHT - 57:
             # frame на завод
-            pos1 = (214, 863)
+            pos1 = (214, HEIGHT - 97)
             blocks_type = 'factories'
-        elif 264 <= mouse_x <= 309 and 810 <= mouse_y <= 862:
-            pos1 = (264, 810)
+        elif 264 <= mouse_x <= 309 and HEIGHT - 150 <= mouse_y <= HEIGHT - 98:
+            pos1 = (264, HEIGHT - 150)
             blocks_type = 'defensive_walls'
-        elif 264 <= mouse_x <= 309 and 863 <= mouse_y <= 913:
-            pos1 = (264, 863)
+        elif 264 <= mouse_x <= 309 and HEIGHT - 97 <= mouse_y <= HEIGHT - 47:
+            pos1 = (264, HEIGHT - 97)
             blocks_type = 'drone factories'
 
     # задействуем левую верхнюю часть меню (также выбор текущего блока)
     if blocks_type == 'drills':
-        if 4 <= mouse_x <= 54 and 710 <= mouse_y <= 760:
+        if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'mechanical drill'
-            pos2 = (4, 710)
-        elif 55 <= mouse_x <= 105 and 710 <= mouse_y <= 760:
+            pos2 = (4, HEIGHT - 250)
+        elif 55 <= mouse_x <= 105 and WIDTH - 250 <= mouse_y <= WIDTH - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, 710)
 
     # задействуем нижнюю левую часть меню
-    if 4 <= mouse_x <= 209 and 906 <= mouse_y <= 956:
+    if 4 <= mouse_x <= 209 and HEIGHT - 54 <= mouse_y <= HEIGHT - 4:
         if 4 <= mouse_x <= 54:
             build = not build
             destroy = False
@@ -254,9 +258,9 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             build = False
 
         if destroy:  # frame на значок уничтожения блоков
-            pos3 = (55, 906)
+            pos3 = (55, HEIGHT - 54)
         elif build:  # frame на строение блоков
-            pos3 = (4, 906)
+            pos3 = (4, HEIGHT - 54)
         else:
             pos3 = None
 
@@ -266,7 +270,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 pygame.init()
 pygame.mixer.init()
 
-size = WIDTH, HEIGHT = 1280, 960
+size = WIDTH, HEIGHT = 1280, 480
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -281,10 +285,10 @@ player_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
-right_frame = pygame.image.load('data/menu/frame.png')
-top_left_frame = pygame.image.load('data/menu/frame.png')
-bottom_left_frame = pygame.image.load('data/menu/frame.png')
+frame = pygame.image.load('data/menu/frame.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
+collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
+collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
@@ -392,6 +396,7 @@ start_screen()
 
 while True:
     screen.fill((0, 0, 0))
+    mouse_x, mouse_y = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
@@ -424,7 +429,7 @@ while True:
         player.y += STEP
         for i in range(5):
             player.rect.y += STEP / 5
-    player.update()
+    player.update()  # для переключения картинки
 
     tmp = random.randrange(0, 5000)
     if tmp == 1 and not soundtrack.get_busy():
@@ -436,27 +441,35 @@ while True:
     # обновляем положение всех спрайтов
     for sprite in all_sprites:
         camera.apply(sprite)
+    # рисуем все группы спрайтов
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
 
+    # рисуем выбранный блок (то что выбрано в меню)
+    if mouse_x > 314 or mouse_y < WIDTH - 256:
+        if type_of_current_block == 'mechanical drill':  # ДОРАБОТАТЬ!
+            screen.blit(collected_mechanical_drill, (mouse_x - (mouse_x % 32), mouse_y - (mouse_y % 32)))
+        elif type_of_current_block == 'pneumatic drill':
+             pass
+
     # тут рисуем меню
-    screen.blit(menu, (0, 706))
+    # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
+    screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
 
     if right_frame_pos is not None:
-        screen.blit(right_frame, right_frame_pos)
+        screen.blit(frame, right_frame_pos)
     if top_left_frame_pos is not None:
-        screen.blit(top_left_frame, top_left_frame_pos)
+        screen.blit(frame, top_left_frame_pos)
     if bottom_left_frame_pos is not None:
-        screen.blit(bottom_left_frame, bottom_left_frame_pos)
+        screen.blit(frame, bottom_left_frame_pos)
 
-    x, y = pygame.mouse.get_pos()
     if pygame.mouse.get_focused():
         pygame.mouse.set_visible(False)
-        screen.blit(cursor, (x, y))
+        screen.blit(cursor, (mouse_x, mouse_y))
 
     pygame.display.flip()
     clock.tick(FPS)
