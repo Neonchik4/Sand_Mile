@@ -201,11 +201,9 @@ class DJ:
 
 class Board:
     def __init__(self):
-        # industry map отвечает за расположение логистических блоков (каждый блок занимает несколько клеток)030
+        # industry map отвечает за расположение логистических блоков (каждый блок занимает несколько клеток)
         self.industry_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
         # тоже самое, только каждый блок занимает одну клетку во избежание повторного отрисовывания
-        self.industry_map_to_drawing = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
-        # Карта ресурсов
         self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
 
@@ -245,6 +243,8 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, 710)
+    else:
+        pos2 = None
 
     # задействуем нижнюю левую часть меню
     if 4 <= mouse_x <= 209 and HEIGHT - 54 <= mouse_y <= HEIGHT - 4:
@@ -388,6 +388,8 @@ player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
 player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
+template_player_x, template_player_y = player.rect.x, player.rect.y
+print()
 
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
@@ -410,26 +412,26 @@ while True:
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         player.is_in_motion = True
+        template_player_x -= 5
         for i in range(5):
             player.rect.x -= STEP / 5
     if keys[pygame.K_d]:
         player.is_in_motion = True
+        template_player_x += 5
         for i in range(5):
             player.rect.x += STEP / 5
     if keys[pygame.K_w]:
         player.is_in_motion = True
+        template_player_y -= 5
         for i in range(5):
             player.rect.y -= STEP / 5
     if keys[pygame.K_s]:
         player.is_in_motion = True
+        template_player_y += 5
         for i in range(5):
             player.rect.y += STEP / 5
     player.update()  # для переключения картинки
-
-    tmp = random.randrange(0, 9500)
-    if tmp == 1 and not soundtrack.get_busy():
-        dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
-    dj.update()
+    index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
 
     # изменяем ракурс камеры
     camera.update(player)
@@ -441,6 +443,11 @@ while True:
     resource_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
+
+    tmp = random.randrange(0, 9500)
+    if tmp == 1 and not soundtrack.get_busy():
+        dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
+    dj.update()
 
     # рисуем выбранный блок, если включен режим строительства (то что выбрано в меню)
     if (mouse_x > 320 or mouse_y < HEIGHT - 256) and build:
