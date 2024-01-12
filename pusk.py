@@ -218,6 +218,7 @@ class Board:
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
     mouse_x, mouse_y = pos_mouse
+    print(mouse_x, mouse_y)
     # задействуем правую часть меню
     if 214 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 5:
         if 214 <= mouse_x <= 263 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
@@ -274,7 +275,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 pygame.init()
 pygame.mixer.init()
 
-size = WIDTH, HEIGHT = 1280, 480
+size = WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
