@@ -206,6 +206,12 @@ class Board:
         # тоже самое, только каждый блок занимает одну клетку во избежание повторного отрисовывания
         self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
+    def append(self, ind_1, ind_2, block):
+        # добавляем класс block во все нужные клетки
+        for siz in range(2):
+            for high in range(2):
+                self.industry_map[ind_1 + siz][ind_2 + high] = block
+
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
@@ -243,8 +249,6 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, 710)
-    else:
-        pos2 = None
 
     # задействуем нижнюю левую часть меню
     if 4 <= mouse_x <= 209 and HEIGHT - 54 <= mouse_y <= HEIGHT - 4:
@@ -389,7 +393,6 @@ player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
 template_player_x, template_player_y = player.rect.x, player.rect.y
-print()
 
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
@@ -406,7 +409,6 @@ while True:
                                                                                          top_left_frame_pos,
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
-
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
@@ -431,7 +433,17 @@ while True:
         for i in range(5):
             player.rect.y += STEP / 5
     player.update()  # для переключения картинки
+
+    # индексы персонажа относительно карты
     index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
+    # индексы мышки относительно карты
+    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
+    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
+
+    tmp = random.randrange(0, 5000)
+    if tmp == 1 and not soundtrack.get_busy():
+        dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
+    dj.update()
 
     # изменяем ракурс камеры
     camera.update(player)
@@ -444,11 +456,6 @@ while True:
     player_group.draw(screen)
     player.rotate_towards_mouse()
 
-    tmp = random.randrange(0, 9500)
-    if tmp == 1 and not soundtrack.get_busy():
-        dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
-    dj.update()
-
     # рисуем выбранный блок, если включен режим строительства (то что выбрано в меню)
     if (mouse_x > 320 or mouse_y < HEIGHT - 256) and build:
         if blocks_type == 'drills':
@@ -457,7 +464,8 @@ while True:
             elif type_of_current_block == 'pneumatic drill':
                 screen.blit(collected_pneumatic_drill, (mouse_x - (mouse_x % 64), mouse_y - (mouse_y % 64)))
 
-    # тут часть рисуем меню
+    # тут рисуем меню
+    # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
