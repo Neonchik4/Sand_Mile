@@ -242,13 +242,16 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             blocks_type = 'drone factories'
 
     # задействуем левую верхнюю часть меню (также выбор текущего блока)
+    # По умолчанию будет включен первый блок при открытии любого раздела
     if blocks_type == 'drills':
         if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'mechanical drill'
             pos2 = (4, HEIGHT - 250)
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
-            pos2 = (55, 710)
+            pos2 = (55, HEIGHT - 250)
+    else:
+        pos2 = None
 
     # задействуем нижнюю левую часть меню
     if 4 <= mouse_x <= 209 and HEIGHT - 54 <= mouse_y <= HEIGHT - 4:
@@ -440,6 +443,7 @@ while True:
     index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
     index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
 
+    # саундтрек
     tmp = random.randrange(0, 5000)
     if tmp == 1 and not soundtrack.get_busy():
         dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
