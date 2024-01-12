@@ -276,7 +276,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 pygame.init()
 pygame.mixer.init()
 
-size = WIDTH, HEIGHT = 1280, 480
+size = WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -458,7 +458,7 @@ while True:
         if type_of_current_block == 'mechanical drill':  # ДОРАБОТАТЬ!
             screen.blit(collected_mechanical_drill, (mouse_x - (mouse_x % 32), mouse_y - (mouse_y % 32)))
         elif type_of_current_block == 'pneumatic drill':
-             pass
+            pass
 
     # тут рисуем меню
     # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
