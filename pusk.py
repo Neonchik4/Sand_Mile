@@ -115,7 +115,7 @@ class Camera:
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y):
+    def __init__(self, pos_x, pos_y): # pos_x и pos_y индексы на карте
         super().__init__(player_group, all_sprites)
         self.x = pos_x * tile_width
         self.y = pos_y * tile_height
@@ -212,8 +212,6 @@ class Board:
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
     mouse_x, mouse_y = pos_mouse
-    print(mouse_x, mouse_y)
-    print(HEIGHT)
     # задействуем правую часть меню
     if 214 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 5:
         if 214 <= mouse_x <= 263 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
@@ -244,7 +242,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'mechanical drill'
             pos2 = (4, HEIGHT - 250)
-        elif 55 <= mouse_x <= 105 and WIDTH - 250 <= mouse_y <= WIDTH - 200:
+        elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, 710)
 
@@ -270,7 +268,8 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 pygame.init()
 pygame.mixer.init()
 
-size = WIDTH, HEIGHT = 1280, 480
+# ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
+size = WIDTH, HEIGHT = 1280, 960
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -411,27 +410,23 @@ while True:
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         player.is_in_motion = True
-        player.x -= STEP
         for i in range(5):
             player.rect.x -= STEP / 5
     if keys[pygame.K_d]:
         player.is_in_motion = True
-        player.x += STEP
         for i in range(5):
             player.rect.x += STEP / 5
     if keys[pygame.K_w]:
         player.is_in_motion = True
-        player.y -= STEP
         for i in range(5):
             player.rect.y -= STEP / 5
     if keys[pygame.K_s]:
         player.is_in_motion = True
-        player.y += STEP
         for i in range(5):
             player.rect.y += STEP / 5
     player.update()  # для переключения картинки
 
-    tmp = random.randrange(0, 5000)
+    tmp = random.randrange(0, 9500)
     if tmp == 1 and not soundtrack.get_busy():
         dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
     dj.update()
@@ -447,19 +442,20 @@ while True:
     player_group.draw(screen)
     player.rotate_towards_mouse()
 
-    # рисуем выбранный блок (то что выбрано в меню)
-    if mouse_x > 314 or mouse_y < WIDTH - 256:
-        if type_of_current_block == 'mechanical drill':  # ДОРАБОТАТЬ!
-            screen.blit(collected_mechanical_drill, (mouse_x - (mouse_x % 32), mouse_y - (mouse_y % 32)))
-        elif type_of_current_block == 'pneumatic drill':
-             pass
+    # рисуем выбранный блок, если включен режим строительства (то что выбрано в меню)
+    if (mouse_x > 320 or mouse_y < HEIGHT - 256) and build:
+        if blocks_type == 'drills':
+            if type_of_current_block == 'mechanical drill':  # ДОРАБОТАТЬ!
+                screen.blit(collected_mechanical_drill, (mouse_x - (mouse_x % 64), mouse_y - (mouse_y % 64)))
+            elif type_of_current_block == 'pneumatic drill':
+                screen.blit(collected_pneumatic_drill, (mouse_x - (mouse_x % 64), mouse_y - (mouse_y % 64)))
 
-    # тут рисуем меню
-    # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
+    # тут часть рисуем меню
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
 
+    # отрисовка frame
     if right_frame_pos is not None:
         screen.blit(frame, right_frame_pos)
     if top_left_frame_pos is not None:
