@@ -394,7 +394,7 @@ player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
 player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
-template_player_x, template_player_y = player.rect.x + tile_width, player.rect.y + tile_height
+template_player_x, template_player_y = player.rect.x, player.rect.y
 
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
@@ -403,6 +403,9 @@ start_screen()
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
+    # print(mouse_x // 32, mouse_y // 32)
+    # print(player.rect.x // 32, player.rect.y // 32)
+    # print()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
@@ -435,7 +438,12 @@ while True:
         for i in range(5):
             player.rect.y += STEP / 5
     player.update()  # для переключения картинки
+
+    # индексы персонажа относительно карты
     index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
+    # индексы мышки относительно карты
+    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
+    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
 
     tmp = random.randrange(0, 5000)
     if tmp == 1 and not soundtrack.get_busy():
