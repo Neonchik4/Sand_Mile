@@ -208,6 +208,12 @@ class Board:
         # Карта ресурсов
         self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
+    def append(self, ind_1, ind_2, block):
+        # добавляем класс block во все нужные клетки
+        for siz in range(2):
+            for high in range(2):
+                self.industry_map[ind_1 + siz][ind_2 + high] = block
+
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
