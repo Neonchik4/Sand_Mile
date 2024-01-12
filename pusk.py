@@ -218,8 +218,6 @@ class Board:
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
     mouse_x, mouse_y = pos_mouse
-    print(mouse_x, mouse_y)
-    print(HEIGHT)
     # задействуем правую часть меню
     if 214 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 5:
         if 214 <= mouse_x <= 263 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
@@ -250,7 +248,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'mechanical drill'
             pos2 = (4, HEIGHT - 250)
-        elif 55 <= mouse_x <= 105 and WIDTH - 250 <= mouse_y <= WIDTH - 200:
+        elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, 710)
 
@@ -276,7 +274,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 pygame.init()
 pygame.mixer.init()
 
-size = WIDTH, HEIGHT = 1280, 720
+size = WIDTH, HEIGHT = 1280, 480
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -458,7 +456,7 @@ while True:
         if type_of_current_block == 'mechanical drill':  # ДОРАБОТАТЬ!
             screen.blit(collected_mechanical_drill, (mouse_x - (mouse_x % 32), mouse_y - (mouse_y % 32)))
         elif type_of_current_block == 'pneumatic drill':
-            pass
+             pass
 
     # тут рисуем меню
     # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
