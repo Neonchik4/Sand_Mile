@@ -394,6 +394,7 @@ player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
 player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
+template_player_x, template_player_y = player.rect.x + tile_width, player.rect.y + tile_height
 
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
@@ -410,31 +411,31 @@ while True:
                                                                                          top_left_frame_pos,
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
-
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         player.is_in_motion = True
-        player.x -= STEP
+        template_player_x -= 5
         for i in range(5):
             player.rect.x -= STEP / 5
     if keys[pygame.K_d]:
         player.is_in_motion = True
-        player.x += STEP
+        template_player_x += 5
         for i in range(5):
             player.rect.x += STEP / 5
     if keys[pygame.K_w]:
         player.is_in_motion = True
-        player.y -= STEP
+        template_player_y -= 5
         for i in range(5):
             player.rect.y -= STEP / 5
     if keys[pygame.K_s]:
         player.is_in_motion = True
-        player.y += STEP
+        template_player_y += 5
         for i in range(5):
             player.rect.y += STEP / 5
     player.update()  # для переключения картинки
+    index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
 
     tmp = random.randrange(0, 5000)
     if tmp == 1 and not soundtrack.get_busy():
