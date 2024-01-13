@@ -15,7 +15,7 @@ def image_to_list(file_name):
 
 
 def generate_level(level):
-    new_player, lvl_x, lvl_y = None, None, None
+    new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
     resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
     for y in range(len(level)):
         for x in range(len(level[y])):
@@ -115,13 +115,13 @@ class Camera:
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y): # pos_x и pos_y индексы на карте
+    def __init__(self, pos_x, pos_y):  # pos_x и pos_y индексы на карте
         super().__init__(player_group, all_sprites)
         self.x = pos_x * tile_width
         self.y = pos_y * tile_height
         self.image = player_image
         self.is_in_motion = False
-        self.hp = 100
+        self.health = 100
         self.rect = self.image.get_rect().move(self.x, self.y)
         # print(self.x, self.y)
         # print()
@@ -272,6 +272,26 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
     return pos1, pos2, pos3
 
 
+class CursorFrame(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__(player_group, all_sprites)
+        self.image = frame_33
+        self.angle_of_rotating_frame = 0.0
+        self.rect = self.image.get_rect().move(pygame.mouse.get_pos())
+        self.orig = self.image.copy()
+
+    def draw(self):
+        if build:
+            self.image = frame_33
+        elif destroy:
+            self.image = red_frame
+
+        if build or destroy:
+            rotated_image = pygame.transform.rotate(self.image, self.angle_of_rotating_frame)
+            rotated_image_rect = rotated_image.get_rect(center=(mouse_x, mouse_y))
+            screen.blit(rotated_image, rotated_image_rect.topleft)
+
+
 pygame.init()
 pygame.mixer.init()
 
@@ -292,6 +312,8 @@ player_group = pygame.sprite.Group()
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
 frame = pygame.image.load('data/menu/frame.png')
+red_frame = pygame.image.load('data/menu/red-frame-33-33.png')
+frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
@@ -383,9 +405,10 @@ map_name = 'data/maps/snow_map_1.png'
 lst_map = image_to_list(map_name)
 
 dj = DJ()
-# представления о игровой доске
+# представления о игровой доске лежат в board
 board = Board()
 camera = Camera()
+cursor_frame = CursorFrame()
 
 # ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
 # (136, 0, 21): player
@@ -437,6 +460,18 @@ while True:
             player.rect.y += STEP / 5
     player.update()  # для переключения картинки
 
+    # изменяем ракурс камеры
+    camera.update(player)
+    # обновляем положение всех спрайтов
+    for sprite in all_sprites:
+        camera.apply(sprite)
+    # рисуем все группы спрайтов
+    tiles_group.draw(screen)
+    resource_tiles_group.draw(screen)
+    player_group.draw(screen)
+    player.rotate_towards_mouse()
+    all_sprites.draw(screen)
+
     # индексы персонажа относительно карты
     index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
     # индексы мышки относительно карты
@@ -449,24 +484,8 @@ while True:
         dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
     dj.update()
 
-    # изменяем ракурс камеры
-    camera.update(player)
-    # обновляем положение всех спрайтов
-    for sprite in all_sprites:
-        camera.apply(sprite)
-    # рисуем все группы спрайтов
-    tiles_group.draw(screen)
-    resource_tiles_group.draw(screen)
-    player_group.draw(screen)
-    player.rotate_towards_mouse()
-
-    # рисуем выбранный блок, если включен режим строительства (то что выбрано в меню)
-    if (mouse_x > 320 or mouse_y < HEIGHT - 256) and build:
-        if blocks_type == 'drills':
-            if type_of_current_block == 'mechanical drill':  # ДОРАБОТАТЬ!
-                screen.blit(collected_mechanical_drill, (mouse_x - (mouse_x % 64), mouse_y - (mouse_y % 64)))
-            elif type_of_current_block == 'pneumatic drill':
-                screen.blit(collected_pneumatic_drill, (mouse_x - (mouse_x % 64), mouse_y - (mouse_y % 64)))
+    cursor_frame.angle_of_rotating_frame += 1
+    cursor_frame.draw()
 
     # тут рисуем меню
     # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
