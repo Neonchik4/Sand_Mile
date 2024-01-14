@@ -332,6 +332,22 @@ class Core(pygame.sprite.Sprite):
         return f'Core: level={self.level}'
 
 
+class MechanicalDrill(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.resources = {}
+
+
+class PneumaticDrill(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.resources = {}
+
+
 pygame.init()
 pygame.mixer.init()
 
@@ -358,6 +374,8 @@ frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
+base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
+base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
@@ -438,6 +456,12 @@ ores_to_str = {
     (120, 141, 207): 'titanium',
     (255, 0, 128): 'spawn_mark'
 }
+# словарь, переводящий тип блока в его ширину
+type_of_current_block_to_width = {
+    'mechanical drill': 2,
+    'pneumatic drill': 2
+}
+
 # пиксель под игрока
 player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
 # Для работы с картами
@@ -459,7 +483,6 @@ player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
 template_player_x, template_player_y = player.rect.x, player.rect.y
-
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
@@ -467,6 +490,12 @@ start_screen()
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
+    # индексы персонажа относительно карты
+    index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
+    # индексы мышки относительно карты
+    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
+    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
@@ -475,6 +504,27 @@ while True:
                                                                                          top_left_frame_pos,
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
+
+            if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None:
+                can_build_cur_block = True
+                tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
+                print(type_of_current_block_to_width[type_of_current_block])
+                print(index_mouse_x)
+                print(index_mouse_y)
+                for i in range(type_of_current_block_to_width[type_of_current_block]):
+                    for j in range(type_of_current_block_to_width[type_of_current_block]):
+                        if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
+                            can_build_cur_block = False
+                if can_build_cur_block:
+                    tmp_class_cur_block = None
+                    if type_of_current_block == 'mechanical drill':
+                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'), index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'pneumatic drill':
+                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'), index_mouse_x, index_mouse_y)
+
+                    if tmp_class_cur_block is not None:
+                        board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
+
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
@@ -512,12 +562,6 @@ while True:
     player_group.draw(screen)
     player.rotate_towards_mouse()
     all_sprites.draw(screen)
-
-    # индексы персонажа относительно карты
-    index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
-    # индексы мышки относительно карты
-    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
-    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
 
     # саундтрек
     tmp = random.randrange(0, 5000)
