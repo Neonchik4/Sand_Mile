@@ -308,6 +308,33 @@ class Core(pygame.sprite.Sprite):
     def __init__(self):
         self.hp = 250
         self.level = 1
+        self.resource = {
+            'coal': 0,
+            'copper': 0,
+            'graphite': 0,
+            'lead': 0,
+            'plastanium': 0,
+            'pyratite': 0,
+            'sand': 0,
+            'scrap': 0,
+            'silicon': 0,
+            'surge-alloy': 0,
+            'thorium': 0
+        }
+
+    def kill_myself(self):
+        self.kill()
+
+    def get_resources(self, *args, **kwargs):
+        """Сюда передавать cловарь(строчка: кол-во ресурсов) или список(песок, медь, свинец). Данный метод будет
+        принимать данные ресурсы и записывать к себе в словарь."""
+        for el in args:
+            self.resource[el] += 1
+        for el in kwargs:
+            self.resource[el] += kwargs[el]
+
+    def __repr__(self):  # эта штуковина нужна для удобства в debug
+        return f'Core: level={self.level}'
 
 
 pygame.init()
