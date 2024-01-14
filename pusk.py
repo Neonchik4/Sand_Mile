@@ -20,17 +20,22 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if x != 0 and y != 0:
-                if level[y][x] in tiles_images:
+                if level[y][x] == (232, 120, 0):
+                    for i in range(3):
+                        for j in range(3):
+                            Tile(player_pixel, x + i, y + j)
+                    CoreTile(load_image('cores/core_1.png'), x, y)
+                elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
-                elif level[y][x] != (255, 0, 0):
-                    Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
-                board.resource_map[y][x] = 'sand'
+                board.resource_map[x][y] = 'sand'
+            if level[y][x] == (232, 120, 0):
+                board.append(x, y, Core(), 3)
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -143,6 +148,13 @@ class Player(pygame.sprite.Sprite):
             self.orig = player_image
 
 
+class CoreTile(pygame.sprite.Sprite):
+    def __init__(self, img, pos_x, pos_y):
+        super().__init__(tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
@@ -206,10 +218,10 @@ class Board:
         # тоже самое, только каждый блок занимает одну клетку во избежание повторного отрисовывания
         self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
-    def append(self, ind_1, ind_2, block):
+    def append(self, ind_1, ind_2, block, width):
         # добавляем класс block во все нужные клетки
-        for siz in range(2):
-            for high in range(2):
+        for siz in range(width):
+            for high in range(width):
                 self.industry_map[ind_1 + siz][ind_2 + high] = block
 
 
@@ -292,6 +304,12 @@ class CursorFrame(pygame.sprite.Sprite):
             screen.blit(rotated_image, rotated_image_rect.topleft)
 
 
+class Core(pygame.sprite.Sprite):
+    def __init__(self):
+        self.hp = 250
+        self.level = 1
+
+
 pygame.init()
 pygame.mixer.init()
 
@@ -326,7 +344,6 @@ build, destroy = False, False
 tiles_images = {
     # ground blocks
     (0, 0, 0): load_image('tiles/ground/black_tile.png'),
-    (232, 120, 0): load_image('cores/core_1.png'),
     (127, 127, 127): [load_image('tiles/ground/basalt_1.png'), load_image('tiles/ground/basalt_2.png'),
                       load_image('tiles/ground/basalt_3.png')],
     (255, 128, 255): [load_image('tiles/ground/bluemat1.png'), load_image('tiles/ground/bluemat2.png'),
