@@ -143,11 +143,57 @@ class Player(pygame.sprite.Sprite):
             self.orig = player_image
 
 
+def get_pos_spawn_mark():
+    for i in range(len(board.industry_map)):
+        for j in range(len(board.industry_map[i])):
+            if board.industry_map[i][j] == "spawn_mark":
+                return tile_width * i, tile_height * j
+
+
+# TODO: сделать спавн в опр радиусе
+# Пока в определом месте, потом пройдемся по карте и найдем место спавна
+def spawn_enemy():
+    return Dagger(*get_pos_spawn_mark())
+
+
+class Dagger(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(enemy_group, all_sprites)
+        # self.hp = ???
+        # self.damage = ???
+        self.speed = 10
+        self.x = pos_x
+        self.y = pos_y
+        self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
+        self.rect = self.image.get_rect().move(self.x, self.y)
+
+    '''
+    def update(self):
+        velocity = 5
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - self.x, mouse_y - self.y
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.image, int(angle))
+        self.rect = self.image.get_rect(center=self.rect.center)
+        # self.x, self.y = velocity * math.cos(angle), velocity * math.sin(angle)
+        # self.rect.move_ip(self.x, self.y)
+    '''
+
+    def move_towards_player2(self, player):
+        # Find direction vector (dx, dy) between enemy and player.
+        dirvect = pygame.math.Vector2(player.rect.x - self.rect.x,
+                                      player.rect.y - self.rect.y)
+        dirvect.normalize()
+        # Move along this normalized vector towards the player at current speed.
+        dirvect.scale_to_length(self.speed)
+        self.rect.move_ip(dirvect)
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = None
-        if type(tiles_images[tile_type]) == list:  # по неведомой причине через is не работает
+        if isinstance(tiles_images[tile_type], list):   # Я по фиксил
             self.image = random.choice(tiles_images[tile_type])
         else:
             self.image = tiles_images[tile_type]
@@ -158,7 +204,7 @@ class ResourceTile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(resource_tiles_group, all_sprites)
         self.image = None
-        if type(ores_images[tile_type]) == list:  # по неведомой причине через is не работает
+        if isinstance(ores_images[tile_type], list):  # Я по фиксил
             self.image = random.choice(ores_images[tile_type])
         else:
             self.image = ores_images[tile_type]
@@ -306,6 +352,7 @@ STEP = 7
 FPS = 50
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 resource_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 
@@ -422,6 +469,11 @@ template_player_x, template_player_y = player.rect.x, player.rect.y
 
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
+
+# Для спавна через определенное время
+MYEVENTTYPE = pygame.USEREVENT
+pygame.time.set_timer(MYEVENTTYPE, 10)
+
 start_screen()
 
 while True:
@@ -435,6 +487,9 @@ while True:
                                                                                          top_left_frame_pos,
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
+        if event.type == MYEVENTTYPE:
+            spawn_enemy()
+
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
@@ -469,6 +524,7 @@ while True:
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
     player_group.draw(screen)
+    enemy_group.draw(screen)
     player.rotate_towards_mouse()
     all_sprites.draw(screen)
 
