@@ -24,7 +24,8 @@ def generate_level(level):
                     for i in range(3):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
-                    CoreTile(load_image('cores/core_1.png'), x, y)
+                    tmp_core = Core(load_image('cores/core_1.png'), x, y)
+                    board.append(x, y, tmp_core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
@@ -34,8 +35,6 @@ def generate_level(level):
                 Tile((0, 0, 0), x, y)
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
                 board.resource_map[x][y] = 'sand'
-            if level[y][x] == (232, 120, 0):
-                board.append(x, y, Core(), 3)
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -146,13 +145,6 @@ class Player(pygame.sprite.Sprite):
             self.orig = player_image_in_move
         else:
             self.orig = player_image
-
-
-class CoreTile(pygame.sprite.Sprite):
-    def __init__(self, img, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites)
-        self.image = img
-        self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -305,7 +297,10 @@ class CursorFrame(pygame.sprite.Sprite):
 
 
 class Core(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
         self.hp = 250
         self.level = 1
         self.resource = {
@@ -352,6 +347,7 @@ FPS = 50
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 resource_tiles_group = pygame.sprite.Group()
+industry_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
@@ -512,6 +508,7 @@ while True:
     # рисуем все группы спрайтов
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
+    industry_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
     all_sprites.draw(screen)
