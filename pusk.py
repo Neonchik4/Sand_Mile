@@ -1,9 +1,14 @@
-import pygame
 import os
 import sys
-import random
 import math
+import random
+import pygame
 from PIL import Image
+
+# Нужна еще одна билиотека
+# pip install pygame_widgets
+import pygame_widgets
+from pygame_widgets.button import Button
 
 
 def image_to_list(file_name):
@@ -85,16 +90,62 @@ def start_screen():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
-
+    x, y = screen.get_size()
+    width = 300
+    height = 75
+    print(x, y)
+    '''
+    button = Button(
+        screen,  # Surface to place button on
+        x // 2 - (width // 2),  # X-coordinate of top left corner
+        int(y * 0.75 - (height // 2)),  # Y-coordinate of top left corner
+        width,  # Width
+        height,  # Height
+        text="Создать нового пользователя",  # Text to display
+        fontSize=28,  # Size of font
+        margin=20,  # Minimum distance between text/image and edge of button
+        inactiveColour=(255, 255, 255),  # Colour of button when not being interacted with
+        hoverColour=(244, 169, 0),  # Colour of button when being hovered over
+        pressedColour=(0, 200, 20),  # Colour of button when being clicked
+        radius=20,  # Radius of border corners (leave empty for not curved)
+        onClick=lambda: True
+    )
+    '''
+    btn_new_user = Button(
+        color=(244, 169, 0),
+        x=x // 2 - (width // 2),
+        y=int(y * 0.75 - (height // 2)),
+        width=width,
+        height=height,
+        text="Создать нового пользователя"
+    )
+    btn_new_user.draw(screen)
+    NEW_USER = pygame.USEREVENT + 2
     while True:
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        pygame_widgets.update(events)
+
+        for event in events:
+            print(event)
             if event.type == pygame.QUIT:
                 terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEBUTTONUP:
+                if event.type == NEW_USER:
+                    new_user_screen()
             elif event.type == pygame.KEYDOWN or \
                     event.type == pygame.MOUSEBUTTONDOWN:
                 return  # начинаем игру
+
+        if btn_new_user.box.collidepoint(pygame.mouse.get_pos()):
+            print("click")
+            pygame.event.post(pygame.event.Event(NEW_USER))
+
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def new_user_screen():
+    screen.fill((125, 125, 125))
 
 
 class Camera:
@@ -161,7 +212,7 @@ class Dagger(pygame.sprite.Sprite):
         super().__init__(enemy_group, all_sprites)
         # self.hp = ???
         # self.damage = ???
-        self.speed = 10
+        self.speed = 5
         self.x = pos_x
         self.y = pos_y
         self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
@@ -179,7 +230,7 @@ class Dagger(pygame.sprite.Sprite):
         # self.rect.move_ip(self.x, self.y)
     '''
 
-    def move_towards_player2(self, player):
+    def update(self, player):
         # Find direction vector (dx, dy) between enemy and player.
         dirvect = pygame.math.Vector2(player.rect.x - self.rect.x,
                                       player.rect.y - self.rect.y)
@@ -189,11 +240,46 @@ class Dagger(pygame.sprite.Sprite):
         self.rect.move_ip(dirvect)
 
 
+class Button:
+    def __init__(self, color, x, y, width, height, text=''):
+        self.color = color
+        self.ogcol = color
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+        self.box = None
+        self.clicked = False
+
+    def draw(self, screen, outline=None):
+        if outline:
+            pygame.draw.rect(screen, outline, (self.x - 2, self.y - 2, self.width + 4, self.height + 4), 0)
+
+        self.box = pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height), 0)
+
+        if self.text != '':
+            font = pygame.font.SysFont("segoeuisymbol", 24)
+            text = font.render(self.text, 1, (0, 0, 0))
+            screen.blit(text, (
+                self.x + (self.width / 2 - text.get_width() / 2), self.y + (self.height / 2 - text.get_height() / 2)))
+
+    def is_pressed(self):
+        _1, _2, _3 = pygame.mouse.get_pressed()
+        print(_1)
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        if self.x < mouse_x < self.x + self.width and self.y < mouse_y < self.y + self.height and self.clicked and not _1:
+            self.clicked = False
+            return True
+        else:
+            return False
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = None
-        if isinstance(tiles_images[tile_type], list):   # Я по фиксил
+        if isinstance(tiles_images[tile_type], list):  # Я по фиксил
             self.image = random.choice(tiles_images[tile_type])
         else:
             self.image = tiles_images[tile_type]
@@ -525,6 +611,7 @@ while True:
     resource_tiles_group.draw(screen)
     player_group.draw(screen)
     enemy_group.draw(screen)
+    enemy_group.update(player)
     player.rotate_towards_mouse()
     all_sprites.draw(screen)
 
