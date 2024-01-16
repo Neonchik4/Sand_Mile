@@ -278,7 +278,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 
 class CursorFrame(pygame.sprite.Sprite):
     def __init__(self):
-        super().__init__(player_group, all_sprites)
+        super().__init__(all_sprites)
         self.image = frame_33
         self.angle_of_rotating_frame = 0.0
         self.rect = self.image.get_rect().move(pygame.mouse.get_pos())
@@ -336,7 +336,9 @@ class MechanicalDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
         self.image = img
-        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2, HEIGHT // 2
+        # self.rect
         self.resources = {}
 
 
@@ -482,7 +484,7 @@ player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
 player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
-template_player_x, template_player_y = player.rect.x, player.rect.y
+template_player_x, template_player_y = player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
@@ -508,9 +510,6 @@ while True:
             if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None:
                 can_build_cur_block = True
                 tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
-                print(type_of_current_block_to_width[type_of_current_block])
-                print(index_mouse_x)
-                print(index_mouse_y)
                 for i in range(type_of_current_block_to_width[type_of_current_block]):
                     for j in range(type_of_current_block_to_width[type_of_current_block]):
                         if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
@@ -556,12 +555,12 @@ while True:
     for sprite in all_sprites:
         camera.apply(sprite)
     # рисуем все группы спрайтов
+    cursor_frame.draw()
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
     industry_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
-    all_sprites.draw(screen)
 
     # саундтрек
     tmp = random.randrange(0, 5000)
