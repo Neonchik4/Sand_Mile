@@ -337,8 +337,11 @@ class MechanicalDrill(pygame.sprite.Sprite):
         super().__init__(industry_tiles_group, all_sprites)
         self.image = img
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = WIDTH // 2, HEIGHT // 2
-        # self.rect
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
         self.resources = {}
 
 
@@ -517,9 +520,11 @@ while True:
                 if can_build_cur_block:
                     tmp_class_cur_block = None
                     if type_of_current_block == 'mechanical drill':
-                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'), index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'),
+                                                              index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'pneumatic drill':
-                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'), index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'),
+                                                             index_mouse_x, index_mouse_y)
 
                     if tmp_class_cur_block is not None:
                         board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
