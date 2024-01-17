@@ -220,9 +220,9 @@ class Board:
 class DoubleTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
-        self.image = img
+        self.image = img.copy()
         self.rect = self.image.get_rect()
-        self.orig = self.image
+        self.orig_duo_turret = duo_turret.copy()
         self.health = 100
         self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
         dx = (ind_x - index_player_x) * tile_width
@@ -239,27 +239,28 @@ class DoubleTurret(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
 
-    def rotate_towards_units(self, pos1, pos2):
-        units_x, units_y = pos1, pos2
-        rel_x, rel_y = units_x - (self.rect[0] + self.rect[2] // 2), units_y - (self.rect[1] + self.rect[3] // 2)
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
-        self.rect = self.image.get_rect(center=self.rect.center)
+        duo_turret_img = pygame.transform.rotate(self.orig_duo_turret, int(angle) - 90)
+        duo_turret_rect = duo_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image.blit(duo_turret_img, duo_turret_rect.topleft)
 
 
 class ScatterTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
-        self.image = img
+        self.image = img.copy()
         self.rect = self.image.get_rect()
-        self.orig = self.image
+        self.orig_scatter_turret = scatter.copy()
         self.health = 100
         self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
         dx = (ind_x - index_player_x) * tile_width
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
-        self.damage = 10
+        self.damage = 20
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -269,12 +270,78 @@ class ScatterTurret(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
 
-    def rotate_towards_units(self, pos1, pos2):
-        units_x, units_y = pos1, pos2
-        rel_x, rel_y = units_x - (self.rect[0] + self.rect[2] // 2), units_y - (self.rect[1] + self.rect[3] // 2)
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
-        self.rect = self.image.get_rect(center=self.rect.center)
+        scarret_turret_img = pygame.transform.rotate(self.orig_scatter_turret, int(angle) - 90)
+        scarret_turret_rect = scarret_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_2.copy()
+        self.image.blit(scarret_turret_img, scarret_turret_rect.topleft)
+
+
+class HailTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.orig_hail_turret = hail.copy()
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        hail_turret_img = pygame.transform.rotate(self.orig_hail_turret, int(angle) - 90)
+        hail_turret_rect = hail_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_1.copy()
+        self.image.blit(hail_turret_img, hail_turret_rect.topleft)
+
+
+class SwarmerTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.orig_scatter_turret = swarmer.copy()
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        swarmer_turret_img = pygame.transform.rotate(self.orig_scatter_turret, int(angle) - 90)
+        swarmer_turret_rect = swarmer_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_2.copy()
+        self.image.blit(swarmer_turret_img, swarmer_turret_rect.topleft)
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
@@ -321,6 +388,12 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'scatter turret'
             pos2 = (55, HEIGHT - 250)
+        elif 106 <= mouse_x <= 156 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'hail turret'
+            pos2 = (106, HEIGHT - 250)
+        elif 157 <= mouse_x <= 207 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'swarmer turret'
+            pos2 = (157, HEIGHT - 250)
     else:
         pos2 = None
 
@@ -398,6 +471,9 @@ class Core(pygame.sprite.Sprite):
     def __repr__(self):  # эта штуковина нужна для удобства в debug
         return f'Core: level={self.level}'
 
+    def rotate_towards_units(self):
+        ...
+
 
 class MechanicalDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -447,8 +523,13 @@ drills_image = pygame.image.load('data/menu/menu_drills.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
 turrets_image = pygame.image.load('data/menu/menu_turrets.png')
-collected_duo_turret = pygame.image.load('data/turrets/top_part/duo-turret-top.png')
-collected_scatter_turret = pygame.image.load('data/turrets/top_part/scatter-top.png')
+
+block_1 = pygame.image.load('data/turrets/base_block/block-1.png')
+duo_turret = pygame.image.load('data/turrets/top_part/duo-turret-top.png')
+block_2 = pygame.image.load('data/turrets/base_block/block-2.png')
+scatter = pygame.image.load('data/turrets/top_part/scatter-top.png')
+hail = pygame.image.load('data/turrets/top_part/hail-top.png')
+swarmer = pygame.image.load('data/turrets/top_part/swarmer-top.png')
 base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
 base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
@@ -535,8 +616,10 @@ ores_to_str = {
 type_of_current_block_to_width = {
     'mechanical drill': 2,
     'pneumatic drill': 2,
-    'double turret': 2,
-    'scatter turret': 2
+    'double turret': 1,
+    'scatter turret': 2,
+    'hail turret': 1,
+    'swarmer turret': 2
 }
 
 # пиксель под игрока
@@ -592,17 +675,17 @@ while True:
                 if can_build_cur_block:
                     tmp_class_cur_block = None
                     if type_of_current_block == 'mechanical drill':
-                        tmp_class_cur_block = MechanicalDrill(base_mechanical_drill,
-                                                              index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = MechanicalDrill(base_mechanical_drill, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'pneumatic drill':
-                        tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill,
-                                                             index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'double turret':
-                        tmp_class_cur_block = DoubleTurret(collected_duo_turret,
-                                                           index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = DoubleTurret(block_1, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'scatter turret':
-                        tmp_class_cur_block = ScatterTurret(collected_scatter_turret,
-                                                            index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = ScatterTurret(block_2, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'hail turret':
+                        tmp_class_cur_block = HailTurret(block_1, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'swarmer turret':
+                        tmp_class_cur_block = SwarmerTurret(block_2, index_mouse_x, index_mouse_y)
 
                     if tmp_class_cur_block is not None:
                         board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
@@ -641,6 +724,8 @@ while True:
     cursor_frame.draw()
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
+    for i in industry_tiles_group:
+        i.rotate_towards_units()
     industry_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
