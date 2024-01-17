@@ -546,7 +546,7 @@ while True:
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
 
-            if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None:
+            if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None and not player.is_in_motion:
                 can_build_cur_block = True
                 tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
                 for i in range(type_of_current_block_to_width[type_of_current_block]):
