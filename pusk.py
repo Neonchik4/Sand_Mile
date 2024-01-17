@@ -20,17 +20,21 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if x != 0 and y != 0:
-                if level[y][x] in tiles_images:
+                if level[y][x] == (232, 120, 0):
+                    for i in range(3):
+                        for j in range(3):
+                            Tile(player_pixel, x + i, y + j)
+                    tmp_core = Core(load_image('cores/core_1.png'), x, y)
+                    board.append(x, y, tmp_core, 3)
+                elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
-                elif level[y][x] != (255, 0, 0):
-                    Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
-                board.resource_map[y][x] = 'sand'
+                board.resource_map[x][y] = 'sand'
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -68,15 +72,23 @@ def load_image(name, colorkey=None):
 def start_screen():
     screen.fill((125, 125, 125))
     # Не трогать пустую строку - это отступ от заставки
-    intro_text = ['',
-                  "Правила игры:",
-                  "Здесь пока что карта не загружена - находится в процессе разработки",
-                  "Загрузка тайлов в процессе"]
+    intro_text = [
+        "",
+        "Эта игра-песочница, в которой предстоит создать собственный завод по производству различных ресурсов",
+        "Управление реализованно черз кнопки W -> Вперед, A -> Влево, S -> Назад, D -> Вправо",
+        "Ваша задача - это копить ресурсы и готовить оброну. Ведь уже скоро пойдут враги, которые хотят забрать \
+ваши ресурсы",
+    ]
 
     fon = pygame.transform.scale(load_image('logo.png'), (674, 107))
     screen.blit(fon, (WIDTH // 2 - 337, 0))
-    font = pygame.font.Font(None, 25)
-    text_coord = 75
+    font = pygame.font.Font(None, 32)
+    text_coord = 140
+    text = font.render("Представляем вашему вниманию проект Sand Mile.", True, pygame.Color('black'))
+    text_rect = text.get_rect(center=(WIDTH / 2, text_coord))
+    screen.blit(text, text_rect)
+    font = pygame.font.Font(None, 28)
+    text_coord += 10
     for line in intro_text:
         string_rendered = font.render(line, 1, pygame.Color('black'))
         intro_rect = string_rendered.get_rect()
@@ -85,14 +97,30 @@ def start_screen():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
-
+    x, y = screen.get_size()
+    width = 300
+    height = 75
+    btn_new_game = Button(
+        color=(244, 169, 0),
+        x=x // 2 - (width // 2),
+        y=int(y * 0.75 - (height // 2)),
+        width=width,
+        height=height,
+        text="Играть"
+    )
+    btn_new_game.draw(screen)
+    NEW_GAME = pygame.USEREVENT + 2
     while True:
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
+            elif event.type == NEW_GAME:
+                return
+
+        if btn_new_game.box.collidepoint(pygame.mouse.get_pos()):
+            pygame.event.post(pygame.event.Event(NEW_GAME))
+
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -147,7 +175,13 @@ def get_pos_spawn_mark():
     for i in range(len(board.industry_map)):
         for j in range(len(board.industry_map[i])):
             if board.industry_map[i][j] == "spawn_mark":
-                return tile_width * i, tile_height * j
+                return i, j
+def get_pos_core():
+    for i in range(len(board.industry_map)):
+        for j in range(len(board.industry_map[i])):
+            if board.industry_map[i][j]:
+                if isinstance(board.industry_map[i][j], Core):
+                    return board.industry_map[i][j]
 
 
 # TODO: сделать спавн в опр радиусе
@@ -157,43 +191,83 @@ def spawn_enemy():
 
 
 class Dagger(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y):
+    def __init__(self, ind_x, ind_y):
         super().__init__(enemy_group, all_sprites)
         # self.hp = ???
         # self.damage = ???
         self.speed = 10
-        self.x = pos_x
-        self.y = pos_y
         self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
-        self.rect = self.image.get_rect().move(self.x, self.y)
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
 
     '''
     def update(self):
-        velocity = 5
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        rel_x, rel_y = mouse_x - self.x, mouse_y - self.y
-        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.image, int(angle))
-        self.rect = self.image.get_rect(center=self.rect.center)
-        # self.x, self.y = velocity * math.cos(angle), velocity * math.sin(angle)
-        # self.rect.move_ip(self.x, self.y)
+        # Find direction vector (dx, dy) between enemy and player.
+        dx, dy = player.rect.x - self.rect.x, player.rect.y - self.rect.y
+        dist = math.hypot(dx, dy)
+        dx, dy = dx / dist, dy / dist  # Normalize.
+        # Move along this normalized vector towards the player at current speed.
+        self.rect.x += dx * self.speed
+        self.rect.y += dy * self.speed
+    '''
+    '''
+    def folow_core(self):
+        LERP_FACTOR = 0.05
+        minimum_distance = 25
+        maximum_distance = 100
+        target_vector = pygame.math.Vector2(*pops)
+        follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
+        new_follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
+
+        distance = follower_vector.distance_to(target_vector)
+        if distance > minimum_distance:
+            direction_vector = (target_vector - follower_vector) / distance
+            min_step = max(0, distance - maximum_distance)
+            max_step = distance - minimum_distance
+            step_distance = min_step + (max_step - min_step) * LERP_FACTOR
+            new_follower_vector = follower_vector + direction_vector * step_distance
+
+        return new_follower_vector.x, new_follower_vector.y
     '''
 
-    def move_towards_player2(self, player):
-        # Find direction vector (dx, dy) between enemy and player.
-        dirvect = pygame.math.Vector2(player.rect.x - self.rect.x,
-                                      player.rect.y - self.rect.y)
-        dirvect.normalize()
-        # Move along this normalized vector towards the player at current speed.
-        dirvect.scale_to_length(self.speed)
-        self.rect.move_ip(dirvect)
+    def rotate(self):
+        ...
+
+
+class Button:
+    def __init__(self, color, x, y, width, height, text=''):
+        self.color = color
+        self.ogcol = color
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+        self.box = None
+        self.clicked = False
+
+    def draw(self, screen, outline=None):
+        if outline:
+            pygame.draw.rect(screen, outline, (self.x - 2, self.y - 2, self.width + 4, self.height + 4), 0)
+
+        self.box = pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height), 0)
+
+        if self.text != '':
+            font = pygame.font.SysFont("segoeuisymbol", 24)
+            text = font.render(self.text, 1, (0, 0, 0))
+            screen.blit(text, (
+                self.x + (self.width / 2 - text.get_width() / 2), self.y + (self.height / 2 - text.get_height() / 2)))
 
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = None
-        if isinstance(tiles_images[tile_type], list):   # Я по фиксил
+        if isinstance(tiles_images[tile_type], list):
             self.image = random.choice(tiles_images[tile_type])
         else:
             self.image = tiles_images[tile_type]
@@ -204,7 +278,7 @@ class ResourceTile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(resource_tiles_group, all_sprites)
         self.image = None
-        if isinstance(ores_images[tile_type], list):  # Я по фиксил
+        if isinstance(ores_images[tile_type], list):
             self.image = random.choice(ores_images[tile_type])
         else:
             self.image = ores_images[tile_type]
@@ -252,10 +326,10 @@ class Board:
         # тоже самое, только каждый блок занимает одну клетку во избежание повторного отрисовывания
         self.resource_map = [[None for _ in range(len(lst_map[0]))] for __ in range(len(lst_map))]
 
-    def append(self, ind_1, ind_2, block):
+    def append(self, ind_1, ind_2, block, width):
         # добавляем класс block во все нужные клетки
-        for siz in range(2):
-            for high in range(2):
+        for siz in range(width):
+            for high in range(width):
                 self.industry_map[ind_1 + siz][ind_2 + high] = block
 
 
@@ -320,7 +394,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
 
 class CursorFrame(pygame.sprite.Sprite):
     def __init__(self):
-        super().__init__(player_group, all_sprites)
+        super().__init__(all_sprites)
         self.image = frame_33
         self.angle_of_rotating_frame = 0.0
         self.rect = self.image.get_rect().move(pygame.mouse.get_pos())
@@ -338,6 +412,63 @@ class CursorFrame(pygame.sprite.Sprite):
             screen.blit(rotated_image, rotated_image_rect.topleft)
 
 
+class Core(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.hp = 250
+        self.level = 1
+        self.resource = {
+            'coal': 0,
+            'copper': 0,
+            'graphite': 0,
+            'lead': 0,
+            'plastanium': 0,
+            'pyratite': 0,
+            'sand': 0,
+            'scrap': 0,
+            'silicon': 0,
+            'surge-alloy': 0,
+            'thorium': 0
+        }
+
+    def kill_myself(self):
+        self.kill()
+
+    def get_resources(self, *args, **kwargs):
+        """Сюда передавать cловарь(строчка: кол-во ресурсов) или список(песок, медь, свинец). Данный метод будет
+        принимать данные ресурсы и записывать к себе в словарь."""
+        for el in args:
+            self.resource[el] += 1
+        for el in kwargs:
+            self.resource[el] += kwargs[el]
+
+    def __repr__(self):  # эта штуковина нужна для удобства в debug
+        return f'Core: level={self.level}'
+
+
+class MechanicalDrill(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.resources = {}
+
+
+class PneumaticDrill(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.resources = {}
+
+
 pygame.init()
 pygame.mixer.init()
 
@@ -352,9 +483,10 @@ STEP = 7
 FPS = 50
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
 resource_tiles_group = pygame.sprite.Group()
+industry_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
@@ -364,6 +496,8 @@ frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
+base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
+base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
@@ -373,7 +507,6 @@ build, destroy = False, False
 tiles_images = {
     # ground blocks
     (0, 0, 0): load_image('tiles/ground/black_tile.png'),
-    (232, 120, 0): load_image('cores/core_1.png'),
     (127, 127, 127): [load_image('tiles/ground/basalt_1.png'), load_image('tiles/ground/basalt_2.png'),
                       load_image('tiles/ground/basalt_3.png')],
     (255, 128, 255): [load_image('tiles/ground/bluemat1.png'), load_image('tiles/ground/bluemat2.png'),
@@ -445,6 +578,12 @@ ores_to_str = {
     (120, 141, 207): 'titanium',
     (255, 0, 128): 'spawn_mark'
 }
+# словарь, переводящий тип блока в его ширину
+type_of_current_block_to_width = {
+    'mechanical drill': 2,
+    'pneumatic drill': 2
+}
+
 # пиксель под игрока
 player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
 # Для работы с картами
@@ -465,20 +604,23 @@ player_image = pygame.transform.scale(load_image('units/alpha.png'), (45, 40))
 player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light.png'), (45, 74))
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
-template_player_x, template_player_y = player.rect.x, player.rect.y
-
+template_player_x, template_player_y = player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
-
-# Для спавна через определенное время
-MYEVENTTYPE = pygame.USEREVENT
-pygame.time.set_timer(MYEVENTTYPE, 10)
-
 start_screen()
 
+SPAWN_ENEMY = pygame.USEREVENT + 1
+pygame.time.set_timer(SPAWN_ENEMY, 10)
+flag = True
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
+    # индексы персонажа относительно карты
+    index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
+    # индексы мышки относительно карты
+    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
+    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
@@ -487,8 +629,28 @@ while True:
                                                                                          top_left_frame_pos,
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
-        if event.type == MYEVENTTYPE:
+
+            if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None:
+                can_build_cur_block = True
+                tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
+                for i in range(type_of_current_block_to_width[type_of_current_block]):
+                    for j in range(type_of_current_block_to_width[type_of_current_block]):
+                        if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
+                            can_build_cur_block = False
+                if can_build_cur_block:
+                    tmp_class_cur_block = None
+                    if type_of_current_block == 'mechanical drill':
+                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'),
+                                                              index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'pneumatic drill':
+                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'),
+                                                             index_mouse_x, index_mouse_y)
+
+                    if tmp_class_cur_block is not None:
+                        board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
+        if event.type == SPAWN_ENEMY and flag:
             spawn_enemy()
+            flag = False
 
     # перемещение персонажа
     player.is_in_motion = False
@@ -521,18 +683,14 @@ while True:
     for sprite in all_sprites:
         camera.apply(sprite)
     # рисуем все группы спрайтов
+    cursor_frame.draw()
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
-    player_group.draw(screen)
+    industry_tiles_group.draw(screen)
     enemy_group.draw(screen)
+    player_group.draw(screen)
     player.rotate_towards_mouse()
-    all_sprites.draw(screen)
-
-    # индексы персонажа относительно карты
-    index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
-    # индексы мышки относительно карты
-    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
-    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
+    # enemy_group.update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
