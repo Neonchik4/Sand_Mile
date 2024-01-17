@@ -328,6 +328,9 @@ class Core(pygame.sprite.Sprite):
         for el in kwargs:
             self.resource[el] += kwargs[el]
 
+    def update_draw(self):
+        pass
+
     def __repr__(self):  # эта штуковина нужна для удобства в debug
         return f'Core: level={self.level}'
 
@@ -335,22 +338,51 @@ class Core(pygame.sprite.Sprite):
 class MechanicalDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
-        self.image = img
+        self.image = img.copy()
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
         dx = (ind_x - index_player_x) * tile_width
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+
+        self.angle = 0.0
+        self.orig_rotate_img = rotator_mechanical_drill.copy()
+        self.delta_rotating = 5.0
         self.resources = {}
+
+    def update_draw(self):
+        self.angle += self.delta_rotating
+        rotated_img = pygame.transform.rotate(self.orig_rotate_img, self.angle)
+        rotated_img_rect = rotated_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image.blit(base_mechanical_drill, (0, 0))
+        self.image.blit(rotated_img, rotated_img_rect.topleft)
+        self.image.blit(stub_mechanical_drill, (0, 0))
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
-        self.image = img
-        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+
+        self.angle = 0.0
+        self.orig_rotate_img = rotator_pneumatic_drill.copy()
+        self.delta_rotating = 5.0
         self.resources = {}
+
+    def update_draw(self):
+        self.angle += self.delta_rotating
+        rotated_img = pygame.transform.rotate(self.orig_rotate_img, self.angle)
+        rotated_img_rect = rotated_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image.blit(base_pneumatic_drill, (0, 0))
+        self.image.blit(rotated_img, rotated_img_rect.topleft)
+        self.image.blit(stub_pneumatic_drill, (0, 0))
 
 
 pygame.init()
@@ -379,6 +411,10 @@ frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
+rotator_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-rotator.png')
+rotator_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-rotator.png')
+stub_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-top.png')
+stub_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-top.png')
 base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
 base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
@@ -520,15 +556,13 @@ while True:
                 if can_build_cur_block:
                     tmp_class_cur_block = None
                     if type_of_current_block == 'mechanical drill':
-                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'),
-                                                              index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = MechanicalDrill(base_mechanical_drill, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'pneumatic drill':
-                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'),
-                                                             index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill, index_mouse_x, index_mouse_y)
 
                     if tmp_class_cur_block is not None:
                         board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
-
+    
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
@@ -560,9 +594,10 @@ while True:
     for sprite in all_sprites:
         camera.apply(sprite)
     # рисуем все группы спрайтов
-    cursor_frame.draw()
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
+    for el in industry_tiles_group:
+        el.update_draw()
     industry_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
