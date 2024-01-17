@@ -217,6 +217,66 @@ class Board:
                 self.industry_map[ind_1 + siz][ind_2 + high] = block
 
 
+class DoubleTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect()
+        self.orig = self.image
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self, pos1, pos2):
+        units_x, units_y = pos1, pos2
+        rel_x, rel_y = units_x - (self.rect[0] + self.rect[2] // 2), units_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+
+class ScatterTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img
+        self.rect = self.image.get_rect()
+        self.orig = self.image
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 10
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self, pos1, pos2):
+        units_x, units_y = pos1, pos2
+        rel_x, rel_y = units_x - (self.rect[0] + self.rect[2] // 2), units_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
     mouse_x, mouse_y = pos_mouse
@@ -253,6 +313,13 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             pos2 = (4, HEIGHT - 250)
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
+            pos2 = (55, HEIGHT - 250)
+    elif blocks_type == 'turrets':
+        if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'double turret'
+            pos2 = (4, HEIGHT - 250)
+        elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'scatter turret'
             pos2 = (55, HEIGHT - 250)
     else:
         pos2 = None
@@ -357,7 +424,7 @@ pygame.init()
 pygame.mixer.init()
 
 # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
-size = WIDTH, HEIGHT = 1280, 960
+size = WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -379,6 +446,9 @@ frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
+turrets_image = pygame.image.load('data/menu/menu_turrets.png')
+collected_duo_turret = pygame.image.load('data/turrets/top_part/duo-turret-top.png')
+collected_scatter_turret = pygame.image.load('data/turrets/top_part/scatter-top.png')
 base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
 base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
@@ -464,7 +534,9 @@ ores_to_str = {
 # словарь, переводящий тип блока в его ширину
 type_of_current_block_to_width = {
     'mechanical drill': 2,
-    'pneumatic drill': 2
+    'pneumatic drill': 2,
+    'double turret': 2,
+    'scatter turret': 2
 }
 
 # пиксель под игрока
@@ -520,11 +592,17 @@ while True:
                 if can_build_cur_block:
                     tmp_class_cur_block = None
                     if type_of_current_block == 'mechanical drill':
-                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'),
+                        tmp_class_cur_block = MechanicalDrill(base_mechanical_drill,
                                                               index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'pneumatic drill':
-                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'),
+                        tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill,
                                                              index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'double turret':
+                        tmp_class_cur_block = DoubleTurret(collected_duo_turret,
+                                                           index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'scatter turret':
+                        tmp_class_cur_block = ScatterTurret(collected_scatter_turret,
+                                                            index_mouse_x, index_mouse_y)
 
                     if tmp_class_cur_block is not None:
                         board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
@@ -581,6 +659,8 @@ while True:
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
+    elif blocks_type == 'turrets':
+        screen.blit(turrets_image, (4, HEIGHT - 250))
 
     # отрисовка frame
     if right_frame_pos is not None:
