@@ -990,6 +990,10 @@ while True:
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
+    elif blocks_type == 'logistics blocks':
+        screen.blit(logistics_blocks_image, (4, HEIGHT - 250))
+    elif blocks_type == 'turrets':
+        screen.blit(turrets_image, (4, HEIGHT - 250))
 
     # отрисовка frame
     if right_frame_pos is not None:
