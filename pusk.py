@@ -31,6 +31,8 @@ def generate_level(level):
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
+                elif level[y][x] != (255, 0, 0):
+                    Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
@@ -72,15 +74,23 @@ def load_image(name, colorkey=None):
 def start_screen():
     screen.fill((125, 125, 125))
     # Не трогать пустую строку - это отступ от заставки
-    intro_text = ['',
-                  "Правила игры:",
-                  "Здесь пока что карта не загружена - находится в процессе разработки",
-                  "Загрузка тайлов в процессе"]
+    intro_text = [
+        "",
+        "Эта игра-песочница, в которой предстоит создать собственный завод по производству различных ресурсов",
+        "Управление реализованно черз кнопки W -> Вперед, A -> Влево, S -> Назад, D -> Вправо",
+        "Ваша задача - это копить ресурсы и готовить оброну. Ведь уже скоро пойдут враги, которые хотят забрать \
+ваши ресурсы",
+    ]
 
     fon = pygame.transform.scale(load_image('logo.png'), (674, 107))
     screen.blit(fon, (WIDTH // 2 - 337, 0))
-    font = pygame.font.Font(None, 25)
-    text_coord = 75
+    font = pygame.font.Font(None, 32)
+    text_coord = 140
+    text = font.render("Представляем вашему вниманию проект Sand Mile.", True, pygame.Color('black'))
+    text_rect = text.get_rect(center=(WIDTH / 2, text_coord))
+    screen.blit(text, text_rect)
+    font = pygame.font.Font(None, 28)
+    text_coord += 10
     for line in intro_text:
         string_rendered = font.render(line, 1, pygame.Color('black'))
         intro_rect = string_rendered.get_rect()
@@ -89,14 +99,30 @@ def start_screen():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
-
+    x, y = screen.get_size()
+    width = 300
+    height = 75
+    btn_new_game = Button(
+        color=(244, 169, 0),
+        x=x // 2 - (width // 2),
+        y=int(y * 0.75 - (height // 2)),
+        width=width,
+        height=height,
+        text="Играть"
+    )
+    btn_new_game.draw(screen)
+    NEW_GAME = pygame.USEREVENT + 2
     while True:
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
+            elif event.type == NEW_GAME:
+                return
+
+        if btn_new_game.box.collidepoint(pygame.mouse.get_pos()):
+            pygame.event.post(pygame.event.Event(NEW_GAME))
+
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -147,11 +173,103 @@ class Player(pygame.sprite.Sprite):
             self.orig = player_image
 
 
+def get_pos_spawn_mark():
+    for i in range(len(board.industry_map)):
+        for j in range(len(board.industry_map[i])):
+            if board.industry_map[i][j] == "spawn_mark":
+                return i, j
+def get_pos_core():
+    for i in range(len(board.industry_map)):
+        for j in range(len(board.industry_map[i])):
+            if board.industry_map[i][j]:
+                if isinstance(board.industry_map[i][j], Core):
+                    return board.industry_map[i][j]
+
+
+# TODO: сделать спавн в опр радиусе
+# Пока в определом месте, потом пройдемся по карте и найдем место спавна
+def spawn_enemy():
+    return Dagger(*get_pos_spawn_mark())
+
+
+class Dagger(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y):
+        super().__init__(enemy_group, all_sprites)
+        # self.hp = ???
+        # self.damage = ???
+        self.speed = 10
+        self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+
+    '''
+    def update(self):
+        # Find direction vector (dx, dy) between enemy and player.
+        dx, dy = player.rect.x - self.rect.x, player.rect.y - self.rect.y
+        dist = math.hypot(dx, dy)
+        dx, dy = dx / dist, dy / dist  # Normalize.
+        # Move along this normalized vector towards the player at current speed.
+        self.rect.x += dx * self.speed
+        self.rect.y += dy * self.speed
+    '''
+    '''
+    def folow_core(self):
+        LERP_FACTOR = 0.05
+        minimum_distance = 25
+        maximum_distance = 100
+        target_vector = pygame.math.Vector2(*pops)
+        follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
+        new_follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
+
+        distance = follower_vector.distance_to(target_vector)
+        if distance > minimum_distance:
+            direction_vector = (target_vector - follower_vector) / distance
+            min_step = max(0, distance - maximum_distance)
+            max_step = distance - minimum_distance
+            step_distance = min_step + (max_step - min_step) * LERP_FACTOR
+            new_follower_vector = follower_vector + direction_vector * step_distance
+
+        return new_follower_vector.x, new_follower_vector.y
+    '''
+
+    def rotate(self):
+        ...
+
+
+class Button:
+    def __init__(self, color, x, y, width, height, text=''):
+        self.color = color
+        self.ogcol = color
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+        self.box = None
+        self.clicked = False
+
+    def draw(self, screen, outline=None):
+        if outline:
+            pygame.draw.rect(screen, outline, (self.x - 2, self.y - 2, self.width + 4, self.height + 4), 0)
+
+        self.box = pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height), 0)
+
+        if self.text != '':
+            font = pygame.font.SysFont("segoeuisymbol", 24)
+            text = font.render(self.text, 1, (0, 0, 0))
+            screen.blit(text, (
+                self.x + (self.width / 2 - text.get_width() / 2), self.y + (self.height / 2 - text.get_height() / 2)))
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = None
-        if type(tiles_images[tile_type]) == list:  # по неведомой причине через is не работает
+        if isinstance(tiles_images[tile_type], list):
             self.image = random.choice(tiles_images[tile_type])
         else:
             self.image = tiles_images[tile_type]
@@ -162,7 +280,7 @@ class ResourceTile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(resource_tiles_group, all_sprites)
         self.image = None
-        if type(ores_images[tile_type]) == list:  # по неведомой причине через is не работает
+        if isinstance(ores_images[tile_type], list):
             self.image = random.choice(ores_images[tile_type])
         else:
             self.image = ores_images[tile_type]
@@ -606,6 +724,7 @@ tiles_group = pygame.sprite.Group()
 resource_tiles_group = pygame.sprite.Group()
 industry_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
@@ -755,6 +874,10 @@ pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
+# SPAWN_ENEMY = pygame.USEREVENT + 1
+# pygame.time.set_timer(SPAWN_ENEMY, 10)
+# flag = True
+# часть Олега
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -851,6 +974,7 @@ while True:
     industry_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
+    # enemy_group.update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
@@ -866,10 +990,6 @@ while True:
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
-    elif blocks_type == 'logistics blocks':
-        screen.blit(logistics_blocks_image, (4, HEIGHT - 250))
-    elif blocks_type == 'turrets':
-        screen.blit(turrets_image, (4, HEIGHT - 250))
 
     # отрисовка frame
     if right_frame_pos is not None:
