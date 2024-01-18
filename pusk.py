@@ -229,7 +229,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         elif 214 <= mouse_x <= 263 and HEIGHT - 199 <= mouse_y <= HEIGHT - 159:
             # frame на конвеер
             pos1 = (214, HEIGHT - 199)
-            blocks_type = 'conveyors'
+            blocks_type = 'logistics blocks'
         elif 264 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             # frame на бур
             pos1 = (264, HEIGHT - 250)
@@ -240,20 +240,58 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             blocks_type = 'factories'
         elif 264 <= mouse_x <= 309 and HEIGHT - 150 <= mouse_y <= HEIGHT - 98:
             pos1 = (264, HEIGHT - 150)
-            blocks_type = 'defensive_walls'
+            blocks_type = 'defensive walls'
         elif 264 <= mouse_x <= 309 and HEIGHT - 97 <= mouse_y <= HEIGHT - 47:
             pos1 = (264, HEIGHT - 97)
             blocks_type = 'drone factories'
 
     # задействуем левую верхнюю часть меню (также выбор текущего блока)
     # По умолчанию будет включен первый блок при открытии любого раздела
+    first_case = ['mechanical drill', 'pneumatic drill']
+    second_case = ['conveyor', 'junction', 'router', 'distributor', 'overflow gate', 'underflow_gate', 'sorter',
+                   'bridge conveyor']
+
     if blocks_type == 'drills':
+        if type_of_current_block not in first_case:
+            type_of_current_block = 'mechanical drill'
+            pos2 = (4, HEIGHT - 250)
+
         if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'mechanical drill'
             pos2 = (4, HEIGHT - 250)
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, HEIGHT - 250)
+    elif blocks_type == 'logistics blocks':
+        if type_of_current_block not in second_case:
+            type_of_current_block = 'conveyor'
+            pos2 = (4, HEIGHT - 250)
+
+        if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'conveyor'
+            pos2 = (4, HEIGHT - 250)
+        elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'junction'
+            pos2 = (55, HEIGHT - 250)
+        elif 106 <= mouse_x <= 156 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'router'
+            pos2 = (106, HEIGHT - 250)
+        elif 157 <= mouse_x <= 207 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'distributor'
+            pos2 = (157, HEIGHT - 250)
+
+        if 4 <= mouse_x <= 54 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'overflow gate'
+            pos2 = (4, HEIGHT - 199)
+        elif 55 <= mouse_x <= 105 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'underflow_gate'
+            pos2 = (55, HEIGHT - 199)
+        elif 106 <= mouse_x <= 156 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'sorter'
+            pos2 = (106, HEIGHT - 199)
+        elif 157 <= mouse_x <= 207 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'bridge conveyor'
+            pos2 = (157, HEIGHT - 199)
     else:
         pos2 = None
 
@@ -409,6 +447,7 @@ frame = pygame.image.load('data/menu/frame.png')
 red_frame = pygame.image.load('data/menu/red-frame-33-33.png')
 frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
+logistics_blocks_image = pygame.image.load('data/menu/menu_logistics_blocks.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
 rotator_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-rotator.png')
@@ -417,6 +456,7 @@ stub_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-top.png'
 stub_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-top.png')
 base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
 base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
+
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
@@ -497,10 +537,19 @@ ores_to_str = {
     (120, 141, 207): 'titanium',
     (255, 0, 128): 'spawn_mark'
 }
+
 # словарь, переводящий тип блока в его ширину
 type_of_current_block_to_width = {
     'mechanical drill': 2,
-    'pneumatic drill': 2
+    'pneumatic drill': 2,
+    'conveyor': 1,
+    'junction': 1,
+    'router': 1,
+    'distributor': 1,
+    'overflow gate': 1,
+    'underflow_gate': 1,
+    'sorter': 1,
+    'bridge conveyor': 1
 }
 
 # пиксель под игрока
@@ -627,6 +676,8 @@ while True:
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
+    elif blocks_type == 'logistics blocks':
+        screen.blit(logistics_blocks_image, (4, HEIGHT - 250))
 
     # отрисовка frame
     if right_frame_pos is not None:
