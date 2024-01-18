@@ -390,7 +390,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
     first_case = ['mechanical drill', 'pneumatic drill']
     second_case = ['conveyor', 'junction', 'router', 'distributor', 'overflow gate', 'underflow_gate', 'sorter',
                    'bridge conveyor']
-
+    third_case = ['double turret', 'scatter turret', 'hail turret', 'swarmer turret']
     if blocks_type == 'drills':
         if type_of_current_block not in first_case:
             type_of_current_block = 'mechanical drill'
@@ -433,6 +433,10 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             type_of_current_block = 'bridge conveyor'
             pos2 = (157, HEIGHT - 199)
     elif blocks_type == 'turrets':
+        if type_of_current_block not in third_case:
+            type_of_current_block = 'double turret'
+            pos2 = (4, HEIGHT - 250)
+
         if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'double turret'
             pos2 = (4, HEIGHT - 250)
