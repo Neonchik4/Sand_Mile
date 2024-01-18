@@ -108,7 +108,7 @@ def start_screen():
         y=int(y * 0.75 - (height // 2)),
         width=width,
         height=height,
-        text="Играть"
+        text="Play"
     )
     btn_new_game.draw(screen)
     NEW_GAME = pygame.USEREVENT + 2
