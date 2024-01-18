@@ -25,7 +25,7 @@ def generate_level(level):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
                     tmp_core = Core(load_image('cores/core_1.png'), x, y)
-                    board.append(x, y, tmp_core, 3)
+                    board.append(y, x, tmp_core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
@@ -34,7 +34,7 @@ def generate_level(level):
             else:
                 Tile((0, 0, 0), x, y)
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
-                board.resource_map[x][y] = 'sand'
+                board.resource_map[y][x] = 'sand'
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -534,8 +534,8 @@ while True:
     # индексы персонажа относительно карты
     index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
     # индексы мышки относительно карты
-    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
-    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
+    index_mouse_x = round(index_player_x + (mouse_x - WIDTH // 2) / 32)
+    index_mouse_y = round(index_player_y + (mouse_y - HEIGHT // 2) / 32)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -546,11 +546,22 @@ while True:
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
 
-            if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None and not player.is_in_motion:
-                can_build_cur_block = True
+            if (build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None
+                    and not player.is_in_motion):
+                can_build_cur_block = False
+                template_flag = False
                 tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
-                for i in range(type_of_current_block_to_width[type_of_current_block]):
-                    for j in range(type_of_current_block_to_width[type_of_current_block]):
+
+                for i in range(tmp_width_cur_block):
+                    for j in range(tmp_width_cur_block):
+                        if board.resource_map[index_mouse_y + j][index_mouse_x + i] is not None:
+                            can_build_cur_block = True
+                            template_flag = True
+                    if template_flag:
+                        break
+
+                for i in range(tmp_width_cur_block):
+                    for j in range(tmp_width_cur_block):
                         if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
                             can_build_cur_block = False
                 if can_build_cur_block:
@@ -562,7 +573,7 @@ while True:
 
                     if tmp_class_cur_block is not None:
                         board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
-    
+
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
