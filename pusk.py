@@ -234,6 +234,9 @@ class DoubleTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
+    def update_draw(self):
+        pass
+
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -245,6 +248,7 @@ class DoubleTurret(pygame.sprite.Sprite):
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
         duo_turret_img = pygame.transform.rotate(self.orig_duo_turret, int(angle) - 90)
         duo_turret_rect = duo_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_1.copy()
         self.image.blit(duo_turret_img, duo_turret_rect.topleft)
 
 
@@ -269,6 +273,9 @@ class ScatterTurret(pygame.sprite.Sprite):
         self.health -= a
         if self.health <= 0:
             self.kill()
+
+    def update_draw(self):
+        pass
 
     def rotate_towards_units(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -296,6 +303,9 @@ class HailTurret(pygame.sprite.Sprite):
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
+
+    def update_draw(self):
+        pass
 
     def decrease_health(self, a):
         self.health -= a
@@ -333,6 +343,9 @@ class SwarmerTurret(pygame.sprite.Sprite):
         self.health -= a
         if self.health <= 0:
             self.kill()
+
+    def update_draw(self):
+        pass
 
     def rotate_towards_units(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -540,6 +553,9 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
+    def rotate_towards_units(self):
+        pass
+
 
 class PneumaticDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -564,6 +580,9 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(base_pneumatic_drill, (0, 0))
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
+
+    def rotate_towards_units(self):
+        pass
 
 
 pygame.init()
@@ -692,7 +711,6 @@ ores_to_str = {
 # словарь, переводящий тип блока в его ширину
 type_of_current_block_to_width = {
     'mechanical drill': 2,
-    'pneumatic drill': 2,
     'conveyor': 1,
     'junction': 1,
     'router': 1,
@@ -700,7 +718,7 @@ type_of_current_block_to_width = {
     'overflow gate': 1,
     'underflow_gate': 1,
     'sorter': 1,
-    'bridge conveyor': 1
+    'bridge conveyor': 1,
     'pneumatic drill': 2,
     'double turret': 1,
     'scatter turret': 2,
@@ -753,29 +771,31 @@ while True:
 
             if (build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None
                     and not player.is_in_motion):
-                can_build_cur_block = False
-                template_flag = False
+                can_build_cur_block = True
+                is_there_resources = False
                 tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
 
                 for i in range(tmp_width_cur_block):
                     for j in range(tmp_width_cur_block):
                         if board.resource_map[index_mouse_y + j][index_mouse_x + i] is not None:
-                            can_build_cur_block = True
-                            template_flag = True
-                    if template_flag:
+                            is_there_resources = True
+                    if is_there_resources:
                         break
 
                 for i in range(tmp_width_cur_block):
                     for j in range(tmp_width_cur_block):
                         if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
                             can_build_cur_block = False
+
                 if can_build_cur_block:
                     tmp_class_cur_block = None
-                    if type_of_current_block == 'mechanical drill':
-                        tmp_class_cur_block = MechanicalDrill(base_mechanical_drill, index_mouse_x, index_mouse_y)
-                    elif type_of_current_block == 'pneumatic drill':
-                        tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill, index_mouse_x, index_mouse_y)
-                    elif type_of_current_block == 'double turret':
+                    if is_there_resources:
+                        if type_of_current_block == 'mechanical drill':
+                            tmp_class_cur_block = MechanicalDrill(base_mechanical_drill, index_mouse_x, index_mouse_y)
+                        elif type_of_current_block == 'pneumatic drill':
+                            tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill, index_mouse_x, index_mouse_y)
+
+                    if type_of_current_block == 'double turret':
                         tmp_class_cur_block = DoubleTurret(block_1, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'scatter turret':
                         tmp_class_cur_block = ScatterTurret(block_2, index_mouse_x, index_mouse_y)
