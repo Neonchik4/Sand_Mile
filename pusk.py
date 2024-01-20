@@ -970,8 +970,8 @@ while True:
     # индексы персонажа относительно карты
     index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
     # индексы мышки относительно карты
-    index_mouse_x = round(index_player_x + (mouse_x - WIDTH // 2) / 32)
-    index_mouse_y = round(index_player_y + (mouse_y - HEIGHT // 2) / 32)
+    index_mouse_x = math.floor((template_player_x + mouse_x - WIDTH / 2) / 32)
+    index_mouse_y = math.floor((template_player_y + mouse_y - HEIGHT / 2) / 32)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
