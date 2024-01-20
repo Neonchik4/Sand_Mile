@@ -336,6 +336,12 @@ class Board:
             for high in range(width):
                 self.industry_map[ind_1 + siz][ind_2 + high] = block
 
+    def destroy(self, ind_1, ind_2, block):
+        for h in range(len(self.industry_map)):
+            for w in range(len(self.industry_map[0])):
+                if self.industry_map[h][w] == block:
+                    self.industry_map[h][w] = None
+
 
 class DoubleTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -350,6 +356,7 @@ class DoubleTurret(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.damage = 20
+        self.width = 1  # отвечает за ширину блока в клетках
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -385,6 +392,7 @@ class ScatterTurret(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.damage = 20
+        self.width = 2  # отвечает за ширину блока в клетках
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -420,6 +428,7 @@ class HailTurret(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.damage = 20
+        self.width = 1  # отвечает за ширину блока в клетках
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -455,6 +464,7 @@ class SwarmerTurret(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.damage = 20
+        self.width = 2  # отвечает за ширину блока в клетках
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -631,6 +641,7 @@ class Core(pygame.sprite.Sprite):
             'surge-alloy': 0,
             'thorium': 0
         }
+        self.width = 3  # отвечает за ширину блока в клетках
 
     def kill_myself(self):
         self.kill()
@@ -642,9 +653,6 @@ class Core(pygame.sprite.Sprite):
             self.resource[el] += 1
         for el in kwargs:
             self.resource[el] += kwargs[el]
-
-    def __repr__(self):  # эта штуковина нужна для удобства в debug
-        return f'Core: level={self.level}'
 
     def update(self):
         pass
@@ -665,6 +673,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_mechanical_drill.copy()
         self.delta_rotating = 5.0
         self.resources = {}
+        self.width = 2  # отвечает за ширину блока в клетках
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -693,6 +702,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_pneumatic_drill.copy()
         self.delta_rotating = 5.0
         self.resources = {}
+        self.width = 2  # отвечает за ширину блока в клетках
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -914,7 +924,7 @@ while True:
 
                 for i in range(tmp_width_cur_block):
                     for j in range(tmp_width_cur_block):
-                        if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
+                        if board.industry_map[index_mouse_y + i][index_mouse_x + j] is not None:
                             can_build_cur_block = False
 
                 if can_build_cur_block:
@@ -935,7 +945,12 @@ while True:
                         tmp_class_cur_block = SwarmerTurret(block_2, index_mouse_x, index_mouse_y)
 
                     if tmp_class_cur_block is not None:
-                        board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
+                        board.append(index_mouse_y, index_mouse_x, tmp_class_cur_block, tmp_width_cur_block)
+
+            if destroy and (mouse_x > 320 or mouse_y < HEIGHT - 260):
+                if board.industry_map[index_mouse_y][index_mouse_x] is not None:
+                    board.industry_map[index_mouse_y][index_mouse_x].kill()
+                    board.destroy(index_mouse_y, index_mouse_x, board.industry_map[index_mouse_y][index_mouse_x])
 
     # перемещение персонажа
     player.is_in_motion = False
@@ -983,7 +998,8 @@ while True:
     dj.update()
 
     cursor_frame.angle_of_rotating_frame += 1
-    cursor_frame.draw()
+    if mouse_x > 320 or mouse_y < HEIGHT - 260:
+        cursor_frame.draw()
 
     # тут рисуем меню
     # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
