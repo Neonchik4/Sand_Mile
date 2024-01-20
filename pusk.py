@@ -681,6 +681,9 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
+    def logistic_update(self):
+        pass
+
     def update(self):
         self.update_draw()
 
@@ -725,9 +728,16 @@ class Conveyor(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.width = 1
+        self.anim_images = [conveyor_0, conveyor_1, conveyor_2, conveyor_3]
+        self.resources = [None, None, None]
+        # направление - north, south, west and east
+        self.direction = ''
+
+    def update_draw(self):
+        self.image = self.anim_images[current_anim_img_conv]
 
     def update(self):
-        pass
+        self.update_draw()
 
 
 class Junction(pygame.sprite.Sprite):
@@ -837,6 +847,7 @@ underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
+current_anim_img_conv = 0
 build, destroy = False, False
 
 # r, g, b для каждого tile
@@ -961,6 +972,8 @@ start_screen()
 
 SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 100)
+CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
+pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 
@@ -976,8 +989,8 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
-        # if event.type == SPAWN_ENEMY:
-        #     Dagger(random.randint(40, 70), random.randint(50, 70))
+        if event.type == CHANGE_CONVEYOR_ANIM:
+            current_anim_img_conv = (current_anim_img_conv + 1) % 4
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
                                                                                          top_left_frame_pos,
