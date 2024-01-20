@@ -878,6 +878,10 @@ start_screen()
 # pygame.time.set_timer(SPAWN_ENEMY, 10)
 # flag = True
 # часть Олега
+# TODO: Сделать строительство блоков логистики
+# TODO: Переделать update рисования у industry_group - вызывался один update без циклов в while True
+# TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
+
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
