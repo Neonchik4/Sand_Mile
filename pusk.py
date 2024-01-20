@@ -976,8 +976,8 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
-        if event.type == SPAWN_ENEMY:
-            Dagger(random.randint(40, 70), random.randint(50, 70))
+        # if event.type == SPAWN_ENEMY:
+        #     Dagger(random.randint(40, 70), random.randint(50, 70))
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
                                                                                          top_left_frame_pos,
