@@ -518,7 +518,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
     # задействуем левую верхнюю часть меню (также выбор текущего блока)
     # По умолчанию будет включен первый блок при открытии любого раздела
     first_case = ['mechanical drill', 'pneumatic drill']
-    second_case = ['conveyor', 'junction', 'router', 'distributor', 'overflow gate', 'underflow_gate', 'sorter',
+    second_case = ['conveyor', 'junction', 'router', 'distributor', 'overflow gate', 'underflow gate', 'sorter',
                    'bridge conveyor']
     third_case = ['double turret', 'scatter turret', 'hail turret', 'swarmer turret']
     if blocks_type == 'drills':
@@ -554,7 +554,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             type_of_current_block = 'overflow gate'
             pos2 = (4, HEIGHT - 199)
         elif 55 <= mouse_x <= 105 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
-            type_of_current_block = 'underflow_gate'
+            type_of_current_block = 'underflow gate'
             pos2 = (55, HEIGHT - 199)
         elif 106 <= mouse_x <= 156 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
             type_of_current_block = 'sorter'
@@ -716,6 +716,70 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.update_draw()
 
 
+class Conveyor(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 1
+
+    def update(self):
+        pass
+
+
+class Junction(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 1
+
+    def update(self):
+        pass
+
+
+class Router(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 1
+
+    def update(self):
+        pass
+
+
+class Distributor(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 2
+
+    def update(self):
+        pass
+
+
 pygame.init()
 pygame.mixer.init()
 
@@ -758,6 +822,19 @@ hail = pygame.image.load('data/turrets/top_part/hail-top.png')
 swarmer = pygame.image.load('data/turrets/top_part/swarmer-top.png')
 base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
 base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
+
+conveyor_0 = pygame.image.load('data/logistics_blocks/conveyor-0-0.png')
+conveyor_1 = pygame.image.load('data/logistics_blocks/conveyor-0-1.png')
+conveyor_2 = pygame.image.load('data/logistics_blocks/conveyor-0-2.png')
+conveyor_3 = pygame.image.load('data/logistics_blocks/conveyor-0-3.png')
+bridge_conveyor = pygame.image.load('data/logistics_blocks/bridge_conveyor.png')
+distributor = pygame.image.load('data/logistics_blocks/distributor.png')
+inverted_sorter = pygame.image.load('data/logistics_blocks/inverted_sorter.png')
+junction = pygame.image.load('data/logistics_blocks/junction.png')
+overflow_gate = pygame.image.load('data/logistics_blocks/overflow_gate.png')
+router = pygame.image.load('data/logistics_blocks/router.png')
+sorter = pygame.image.load('data/logistics_blocks/sorter.png')
+underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
 
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
@@ -846,9 +923,9 @@ type_of_current_block_to_width = {
     'conveyor': 1,
     'junction': 1,
     'router': 1,
-    'distributor': 1,
+    'distributor': 2,
     'overflow gate': 1,
-    'underflow_gate': 1,
+    'underflow gate': 1,
     'sorter': 1,
     'bridge conveyor': 1,
     'pneumatic drill': 2,
@@ -888,7 +965,6 @@ start_screen()
 # flag = True
 # часть Олега
 # TODO: Сделать строительство блоков логистики
-# TODO: Переделать update рисования у industry_group - вызывался один update без циклов в while True
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 
 while True:
@@ -944,10 +1020,21 @@ while True:
                     elif type_of_current_block == 'swarmer turret':
                         tmp_class_cur_block = SwarmerTurret(block_2, index_mouse_x, index_mouse_y)
 
+                    # TODO: доработать
+                    if type_of_current_block == 'conveyor':
+                        tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'router':
+                        tmp_class_cur_block = Router(router, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'junction':
+                        tmp_class_cur_block = Junction(junction, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'distributor':
+                        tmp_class_cur_block = Distributor(distributor, index_mouse_x, index_mouse_y)
+
                     if tmp_class_cur_block is not None:
                         board.append(index_mouse_y, index_mouse_x, tmp_class_cur_block, tmp_width_cur_block)
 
-            if destroy and (mouse_x > 320 or mouse_y < HEIGHT - 260):
+            if (destroy and (mouse_x > 320 or mouse_y < HEIGHT - 260) and
+                    type(board.industry_map[index_mouse_y][index_mouse_x]) is not Core):
                 if board.industry_map[index_mouse_y][index_mouse_x] is not None:
                     board.industry_map[index_mouse_y][index_mouse_x].kill()
                     board.destroy(index_mouse_y, index_mouse_x, board.industry_map[index_mouse_y][index_mouse_x])
