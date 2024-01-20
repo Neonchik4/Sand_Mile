@@ -178,6 +178,8 @@ def get_pos_spawn_mark():
         for j in range(len(board.industry_map[i])):
             if board.industry_map[i][j] == "spawn_mark":
                 return i, j
+
+
 def get_pos_core():
     for i in range(len(board.industry_map)):
         for j in range(len(board.industry_map[i])):
@@ -352,9 +354,6 @@ class DoubleTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
-    def update_draw(self):
-        pass
-
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -368,6 +367,9 @@ class DoubleTurret(pygame.sprite.Sprite):
         duo_turret_rect = duo_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
         self.image = block_1.copy()
         self.image.blit(duo_turret_img, duo_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
 
 
 class ScatterTurret(pygame.sprite.Sprite):
@@ -392,9 +394,6 @@ class ScatterTurret(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
 
-    def update_draw(self):
-        pass
-
     def rotate_towards_units(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
@@ -403,6 +402,9 @@ class ScatterTurret(pygame.sprite.Sprite):
         scarret_turret_rect = scarret_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
         self.image = block_2.copy()
         self.image.blit(scarret_turret_img, scarret_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
 
 
 class HailTurret(pygame.sprite.Sprite):
@@ -422,9 +424,6 @@ class HailTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
-    def update_draw(self):
-        pass
-
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -438,6 +437,9 @@ class HailTurret(pygame.sprite.Sprite):
         hail_turret_rect = hail_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
         self.image = block_1.copy()
         self.image.blit(hail_turret_img, hail_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
 
 
 class SwarmerTurret(pygame.sprite.Sprite):
@@ -462,9 +464,6 @@ class SwarmerTurret(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
 
-    def update_draw(self):
-        pass
-
     def rotate_towards_units(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
@@ -473,6 +472,9 @@ class SwarmerTurret(pygame.sprite.Sprite):
         swarmer_turret_rect = swarmer_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
         self.image = block_2.copy()
         self.image.blit(swarmer_turret_img, swarmer_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
@@ -641,14 +643,11 @@ class Core(pygame.sprite.Sprite):
         for el in kwargs:
             self.resource[el] += kwargs[el]
 
-    def update_draw(self):
-        pass
-
     def __repr__(self):  # эта штуковина нужна для удобства в debug
         return f'Core: level={self.level}'
 
-    def rotate_towards_units(self):
-        ...
+    def update(self):
+        pass
 
 
 class MechanicalDrill(pygame.sprite.Sprite):
@@ -675,8 +674,8 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
-    def rotate_towards_units(self):
-        pass
+    def update(self):
+        self.update_draw()
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
@@ -703,8 +702,8 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
 
-    def rotate_towards_units(self):
-        pass
+    def update(self):
+        self.update_draw()
 
 
 pygame.init()
@@ -971,10 +970,7 @@ while True:
     # рисуем все группы спрайтов
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
-    for el in industry_tiles_group:
-        el.update_draw()
-    for i in industry_tiles_group:
-        i.rotate_towards_units()
+    industry_tiles_group.update()
     industry_tiles_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
