@@ -191,14 +191,12 @@ def get_pos_core():
 # TODO: сделать спавн в опр радиусе
 # Пока в определом месте, потом пройдемся по карте и найдем место спавна
 def spawn_enemy():
-    return Dagger(*get_pos_spawn_mark())
+    Dagger(*get_pos_spawn_mark())
 
 
 class Dagger(pygame.sprite.Sprite):
     def __init__(self, ind_x, ind_y):
         super().__init__(enemy_group, all_sprites)
-        # self.hp = ???
-        # self.damage = ???
         self.speed = 10
         self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
         self.rect = self.image.get_rect()
@@ -208,16 +206,16 @@ class Dagger(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
 
-    '''
     def update(self):
         # Find direction vector (dx, dy) between enemy and player.
-        dx, dy = player.rect.x - self.rect.x, player.rect.y - self.rect.y
+        dx, dy = player.rect.x + player.rect.w // 2 - (self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (self.rect.y + self.rect.h // 2)
         dist = math.hypot(dx, dy)
-        dx, dy = dx / dist, dy / dist  # Normalize.
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist  # Normalize.
         # Move along this normalized vector towards the player at current speed.
         self.rect.x += dx * self.speed
         self.rect.y += dy * self.speed
-    '''
+
     '''
     def folow_core(self):
         LERP_FACTOR = 0.05
@@ -956,14 +954,13 @@ player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
 template_player_x, template_player_y = player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2
+index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
-# SPAWN_ENEMY = pygame.USEREVENT + 1
-# pygame.time.set_timer(SPAWN_ENEMY, 10)
-# flag = True
-# часть Олега
+SPAWN_ENEMY = pygame.USEREVENT + 1
+pygame.time.set_timer(SPAWN_ENEMY, 100)
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 
@@ -979,6 +976,8 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
+        if event.type == SPAWN_ENEMY:
+            Dagger(random.randint(40, 70), random.randint(50, 70))
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
                                                                                          top_left_frame_pos,
@@ -1074,9 +1073,10 @@ while True:
     resource_tiles_group.draw(screen)
     industry_tiles_group.update()
     industry_tiles_group.draw(screen)
+    enemy_group.update()
+    enemy_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
-    # enemy_group.update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
