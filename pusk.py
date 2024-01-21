@@ -208,7 +208,9 @@ class Dagger(pygame.sprite.Sprite):
 
     def update(self):
         # Find direction vector (dx, dy) between enemy and player.
-        dx, dy = player.rect.x + player.rect.w // 2 - (self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (self.rect.y + self.rect.h // 2)
+        dx, dy = player.rect.x + player.rect.w // 2 - (
+                    self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (
+                             self.rect.y + self.rect.h // 2)
         dist = math.hypot(dx, dy)
         if dist != 0:
             dx, dy = dx / dist, dy / dist  # Normalize.
@@ -486,7 +488,7 @@ class SwarmerTurret(pygame.sprite.Sprite):
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
-    global destroy, build, blocks_type, type_of_current_block
+    global destroy, build, blocks_type, type_of_current_block, rotate_arrow, arrow_direction
     mouse_x, mouse_y = pos_mouse
     # задействуем правую часть меню
     if 214 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 5:
@@ -595,6 +597,17 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             pos3 = (4, HEIGHT - 54)
         else:
             pos3 = None
+
+        if 106 <= mouse_x <= 156:
+            if arrow_direction == 'east':
+                arrow_direction = 'north'
+            elif arrow_direction == 'north':
+                arrow_direction = 'west'
+            elif arrow_direction == 'west':
+                arrow_direction = 'south'
+            elif arrow_direction == 'south':
+                arrow_direction = 'east'
+            rotate_arrow = pygame.transform.rotate(rotate_arrow.copy(), 90)
 
     return pos1, pos2, pos3
 
@@ -718,7 +731,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
 
 
 class Conveyor(pygame.sprite.Sprite):
-    def __init__(self, img, ind_x, ind_y):
+    def __init__(self, img, ind_x, ind_y, direction):
         super().__init__(industry_tiles_group, all_sprites)
         self.image = img.copy()
         self.rect = self.image.get_rect()
@@ -731,10 +744,16 @@ class Conveyor(pygame.sprite.Sprite):
         self.anim_images = [conveyor_0, conveyor_1, conveyor_2, conveyor_3]
         self.resources = [None, None, None]
         # направление - north, south, west and east
-        self.direction = ''
+        self.direction = direction
 
     def update_draw(self):
         self.image = self.anim_images[current_anim_img_conv]
+        if self.direction == 'north':
+            self.image = pygame.transform.rotate(self.image.copy(), 90)
+        elif self.direction == 'west':
+            self.image = pygame.transform.rotate(self.image.copy(), 180)
+        elif self.direction == 'south':
+            self.image = pygame.transform.rotate(self.image.copy(), 270)
 
     def update(self):
         self.update_draw()
@@ -821,6 +840,7 @@ rotator_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-rotator
 stub_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-top.png')
 stub_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-top.png')
 turrets_image = pygame.image.load('data/menu/menu_turrets.png')
+rotate_arrow = pygame.image.load('data/menu/rotate-arrow.png')
 
 block_1 = pygame.image.load('data/turrets/base_block/block-1.png')
 duo_turret = pygame.image.load('data/turrets/top_part/duo-turret-top.png')
@@ -849,6 +869,8 @@ blocks_type = None
 type_of_current_block = None
 current_anim_img_conv = 0
 build, destroy = False, False
+is_there_arrow = False
+arrow_direction = 'east'
 
 # r, g, b для каждого tile
 tiles_images = {
@@ -1032,9 +1054,8 @@ while True:
                     elif type_of_current_block == 'swarmer turret':
                         tmp_class_cur_block = SwarmerTurret(block_2, index_mouse_x, index_mouse_y)
 
-                    # TODO: доработать
                     if type_of_current_block == 'conveyor':
-                        tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y, arrow_direction)
                     elif type_of_current_block == 'router':
                         tmp_class_cur_block = Router(router, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'junction':
@@ -1118,6 +1139,10 @@ while True:
         screen.blit(frame, top_left_frame_pos)
     if bottom_left_frame_pos is not None:
         screen.blit(frame, bottom_left_frame_pos)
+
+    # рисуем стрелочку направления конвеера
+    if type_of_current_block == 'conveyor' and blocks_type == 'logistics blocks':
+        screen.blit(rotate_arrow, (114, HEIGHT - 45))
 
     if pygame.mouse.get_focused():
         pygame.mouse.set_visible(False)
