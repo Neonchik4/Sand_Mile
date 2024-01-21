@@ -25,16 +25,18 @@ def generate_level(level):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
                     tmp_core = Core(load_image('cores/core_1.png'), x, y)
-                    board.append(x, y, tmp_core, 3)
+                    board.append(y, x, tmp_core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
+                elif level[y][x] != (255, 0, 0):
+                    Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
-                board.resource_map[x][y] = 'sand'
+                board.resource_map[y][x] = 'sand'
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -106,7 +108,7 @@ def start_screen():
         y=int(y * 0.75 - (height // 2)),
         width=width,
         height=height,
-        text="Играть"
+        text="Play"
     )
     btn_new_game.draw(screen)
     NEW_GAME = pygame.USEREVENT + 2
@@ -176,27 +178,32 @@ def get_pos_spawn_mark():
         for j in range(len(board.industry_map[i])):
             if board.industry_map[i][j] == "spawn_mark":
                 return i, j
+
+
 def get_pos_core():
     for i in range(len(board.industry_map)):
         for j in range(len(board.industry_map[i])):
             if board.industry_map[i][j]:
                 if isinstance(board.industry_map[i][j], Core):
-                    return board.industry_map[i][j]
+                    return i, j
 
 
 # TODO: сделать спавн в опр радиусе
 # Пока в определом месте, потом пройдемся по карте и найдем место спавна
 def spawn_enemy():
-    return Dagger(*get_pos_spawn_mark())
+    y, x = get_pos_spawn_mark()
+    units = [Dagger, Crawler, Nova]
+    for i in range(20):
+        y_t, x_t = random.randint(y - 10, y + 10), random.randint(x - 10, x + 10)
+        random.choice(units)(x_t, y_t)
 
 
 class Dagger(pygame.sprite.Sprite):
     def __init__(self, ind_x, ind_y):
         super().__init__(enemy_group, all_sprites)
-        # self.hp = ???
-        # self.damage = ???
         self.speed = 10
         self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
+        self.orig = self.image
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
         dx = (ind_x - index_player_x) * tile_width
@@ -204,37 +211,111 @@ class Dagger(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
 
-    '''
     def update(self):
-        # Find direction vector (dx, dy) between enemy and player.
-        dx, dy = player.rect.x - self.rect.x, player.rect.y - self.rect.y
-        dist = math.hypot(dx, dy)
-        dx, dy = dx / dist, dy / dist  # Normalize.
-        # Move along this normalized vector towards the player at current speed.
+        core_x, core_y = get_pos_core()
+        core = board.industry_map[core_x][core_y]
+        self.move_to_base(core)
+        # self.rotate(core_x, core_y)
+
+    def rotate(self, core_x, core_y):
+        rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def move_to_base(self, core):
+        dx, dy = (core.rect.x + core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  core.rect.y + core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+        dist = (math.hypot(dx, dy))
+        # print(dist)
+        if dist < 150:
+            return
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
         self.rect.x += dx * self.speed
         self.rect.y += dy * self.speed
-    '''
-    '''
-    def folow_core(self):
-        LERP_FACTOR = 0.05
-        minimum_distance = 25
-        maximum_distance = 100
-        target_vector = pygame.math.Vector2(*pops)
-        follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
-        new_follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
 
-        distance = follower_vector.distance_to(target_vector)
-        if distance > minimum_distance:
-            direction_vector = (target_vector - follower_vector) / distance
-            min_step = max(0, distance - maximum_distance)
-            max_step = distance - minimum_distance
-            step_distance = min_step + (max_step - min_step) * LERP_FACTOR
-            new_follower_vector = follower_vector + direction_vector * step_distance
+    def attack(self, target):
+        ...
 
-        return new_follower_vector.x, new_follower_vector.y
-    '''
 
-    def rotate(self):
+class Crawler(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y):
+        super().__init__(enemy_group, all_sprites)
+        self.speed = 10
+        self.image = pygame.transform.scale(load_image("units/crawler.png"), (50, 50))
+        self.orig = self.image
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+
+    def update(self):
+        core_x, core_y = get_pos_core()
+        core = board.industry_map[core_x][core_y]
+        self.move_to_base(core)
+        # self.rotate(core_x, core_y)
+
+    def rotate(self, core_x, core_y):
+        rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def move_to_base(self, core):
+        dx, dy = (core.rect.x + core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  core.rect.y + core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+        dist = (math.hypot(dx, dy))
+        if dist < 200:
+            return
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+        self.rect.x += dx * self.speed
+        self.rect.y += dy * self.speed
+
+    def attack(self, target):
+        ...
+
+
+class Nova(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y):
+        super().__init__(enemy_group, all_sprites)
+        self.speed = 10
+        self.image = pygame.transform.scale(load_image("units/nova.png"), (50, 50))
+        self.orig = self.image
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+
+    def update(self):
+        core_x, core_y = get_pos_core()
+        core = board.industry_map[core_x][core_y]
+        self.move_to_base(core)
+        # self.rotate(core_x, core_y)
+
+    def rotate(self, core_x, core_y):
+        rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def move_to_base(self, core):
+        dx, dy = (core.rect.x + core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  core.rect.y + core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+        dist = (math.hypot(dx, dy))
+        if dist < 250:
+            return
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+        self.rect.x += dx * self.speed
+        self.rect.y += dy * self.speed
+
+    def attack(self, target):
         ...
 
 
@@ -332,6 +413,156 @@ class Board:
             for high in range(width):
                 self.industry_map[ind_1 + siz][ind_2 + high] = block
 
+    def destroy(self, ind_1, ind_2, block):
+        for h in range(len(self.industry_map)):
+            for w in range(len(self.industry_map[0])):
+                if self.industry_map[h][w] == block:
+                    self.industry_map[h][w] = None
+
+
+class DoubleTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.orig_duo_turret = duo_turret.copy()
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+        self.width = 1  # отвечает за ширину блока в клетках
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        duo_turret_img = pygame.transform.rotate(self.orig_duo_turret, int(angle) - 90)
+        duo_turret_rect = duo_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_1.copy()
+        self.image.blit(duo_turret_img, duo_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
+
+
+class ScatterTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.orig_scatter_turret = scatter.copy()
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+        self.width = 2  # отвечает за ширину блока в клетках
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        scarret_turret_img = pygame.transform.rotate(self.orig_scatter_turret, int(angle) - 90)
+        scarret_turret_rect = scarret_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_2.copy()
+        self.image.blit(scarret_turret_img, scarret_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
+
+
+class HailTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.orig_hail_turret = hail.copy()
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+        self.width = 1  # отвечает за ширину блока в клетках
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        hail_turret_img = pygame.transform.rotate(self.orig_hail_turret, int(angle) - 90)
+        hail_turret_rect = hail_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_1.copy()
+        self.image.blit(hail_turret_img, hail_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
+
+
+class SwarmerTurret(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.orig_scatter_turret = swarmer.copy()
+        self.health = 100
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.damage = 20
+        self.width = 2  # отвечает за ширину блока в клетках
+
+    def attack(self, obj):
+        obj.decrease_health(self.damage)
+
+    def decrease_health(self, a):
+        self.health -= a
+        if self.health <= 0:
+            self.kill()
+
+    def rotate_towards_units(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        rel_x, rel_y = mouse_x - (self.rect[0] + self.rect[2] // 2), mouse_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        swarmer_turret_img = pygame.transform.rotate(self.orig_scatter_turret, int(angle) - 90)
+        swarmer_turret_rect = swarmer_turret_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image = block_2.copy()
+        self.image.blit(swarmer_turret_img, swarmer_turret_rect.topleft)
+
+    def update(self):
+        self.rotate_towards_units()
+
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
     global destroy, build, blocks_type, type_of_current_block
@@ -345,7 +576,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         elif 214 <= mouse_x <= 263 and HEIGHT - 199 <= mouse_y <= HEIGHT - 159:
             # frame на конвеер
             pos1 = (214, HEIGHT - 199)
-            blocks_type = 'conveyors'
+            blocks_type = 'logistics blocks'
         elif 264 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             # frame на бур
             pos1 = (264, HEIGHT - 250)
@@ -356,20 +587,75 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
             blocks_type = 'factories'
         elif 264 <= mouse_x <= 309 and HEIGHT - 150 <= mouse_y <= HEIGHT - 98:
             pos1 = (264, HEIGHT - 150)
-            blocks_type = 'defensive_walls'
+            blocks_type = 'defensive walls'
         elif 264 <= mouse_x <= 309 and HEIGHT - 97 <= mouse_y <= HEIGHT - 47:
             pos1 = (264, HEIGHT - 97)
             blocks_type = 'drone factories'
 
     # задействуем левую верхнюю часть меню (также выбор текущего блока)
     # По умолчанию будет включен первый блок при открытии любого раздела
+    first_case = ['mechanical drill', 'pneumatic drill']
+    second_case = ['conveyor', 'junction', 'router', 'distributor', 'overflow gate', 'underflow gate', 'sorter',
+                   'bridge conveyor']
+    third_case = ['double turret', 'scatter turret', 'hail turret', 'swarmer turret']
     if blocks_type == 'drills':
+        if type_of_current_block not in first_case:
+            type_of_current_block = 'mechanical drill'
+            pos2 = (4, HEIGHT - 250)
+
         if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'mechanical drill'
             pos2 = (4, HEIGHT - 250)
         elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
             type_of_current_block = 'pneumatic drill'
             pos2 = (55, HEIGHT - 250)
+    elif blocks_type == 'logistics blocks':
+        if type_of_current_block not in second_case:
+            type_of_current_block = 'conveyor'
+            pos2 = (4, HEIGHT - 250)
+
+        if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'conveyor'
+            pos2 = (4, HEIGHT - 250)
+        elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'junction'
+            pos2 = (55, HEIGHT - 250)
+        elif 106 <= mouse_x <= 156 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'router'
+            pos2 = (106, HEIGHT - 250)
+        elif 157 <= mouse_x <= 207 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'distributor'
+            pos2 = (157, HEIGHT - 250)
+
+        if 4 <= mouse_x <= 54 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'overflow gate'
+            pos2 = (4, HEIGHT - 199)
+        elif 55 <= mouse_x <= 105 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'underflow gate'
+            pos2 = (55, HEIGHT - 199)
+        elif 106 <= mouse_x <= 156 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'sorter'
+            pos2 = (106, HEIGHT - 199)
+        elif 157 <= mouse_x <= 207 and HEIGHT - 199 <= mouse_y <= HEIGHT - 149:
+            type_of_current_block = 'bridge conveyor'
+            pos2 = (157, HEIGHT - 199)
+    elif blocks_type == 'turrets':
+        if type_of_current_block not in third_case:
+            type_of_current_block = 'double turret'
+            pos2 = (4, HEIGHT - 250)
+
+        if 4 <= mouse_x <= 54 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'double turret'
+            pos2 = (4, HEIGHT - 250)
+        elif 55 <= mouse_x <= 105 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'scatter turret'
+            pos2 = (55, HEIGHT - 250)
+        elif 106 <= mouse_x <= 156 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'hail turret'
+            pos2 = (106, HEIGHT - 250)
+        elif 157 <= mouse_x <= 207 and HEIGHT - 250 <= mouse_y <= HEIGHT - 200:
+            type_of_current_block = 'swarmer turret'
+            pos2 = (157, HEIGHT - 250)
     else:
         pos2 = None
 
@@ -432,6 +718,7 @@ class Core(pygame.sprite.Sprite):
             'surge-alloy': 0,
             'thorium': 0
         }
+        self.width = 3  # отвечает за ширину блока в клетках
 
     def kill_myself(self):
         self.kill()
@@ -444,29 +731,133 @@ class Core(pygame.sprite.Sprite):
         for el in kwargs:
             self.resource[el] += kwargs[el]
 
-    def __repr__(self):  # эта штуковина нужна для удобства в debug
-        return f'Core: level={self.level}'
+    def update(self):
+        pass
+
+    def __repr__(self):
+        return "Core"
 
 
 class MechanicalDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
-        self.image = img
+        self.image = img.copy()
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
         dx = (ind_x - index_player_x) * tile_width
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+
+        self.angle = 0.0
+        self.orig_rotate_img = rotator_mechanical_drill.copy()
+        self.delta_rotating = 5.0
         self.resources = {}
+        self.width = 2  # отвечает за ширину блока в клетках
+
+    def update_draw(self):
+        self.angle += self.delta_rotating
+        rotated_img = pygame.transform.rotate(self.orig_rotate_img, self.angle)
+        rotated_img_rect = rotated_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image.blit(base_mechanical_drill, (0, 0))
+        self.image.blit(rotated_img, rotated_img_rect.topleft)
+        self.image.blit(stub_mechanical_drill, (0, 0))
+
+    def update(self):
+        self.update_draw()
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
         super().__init__(industry_tiles_group, all_sprites)
-        self.image = img
-        self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+
+        self.angle = 0.0
+        self.orig_rotate_img = rotator_pneumatic_drill.copy()
+        self.delta_rotating = 5.0
         self.resources = {}
+        self.width = 2  # отвечает за ширину блока в клетках
+
+    def update_draw(self):
+        self.angle += self.delta_rotating
+        rotated_img = pygame.transform.rotate(self.orig_rotate_img, self.angle)
+        rotated_img_rect = rotated_img.get_rect(center=(self.rect.w // 2, self.rect.h // 2))
+        self.image.blit(base_pneumatic_drill, (0, 0))
+        self.image.blit(rotated_img, rotated_img_rect.topleft)
+        self.image.blit(stub_pneumatic_drill, (0, 0))
+
+    def update(self):
+        self.update_draw()
+
+
+class Conveyor(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 1
+
+    def update(self):
+        pass
+
+
+class Junction(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 1
+
+    def update(self):
+        pass
+
+
+class Router(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 1
+
+    def update(self):
+        pass
+
+
+class Distributor(pygame.sprite.Sprite):
+    def __init__(self, img, ind_x, ind_y):
+        super().__init__(industry_tiles_group, all_sprites)
+        self.image = img.copy()
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.width = 2
+
+    def update(self):
+        pass
 
 
 pygame.init()
@@ -494,10 +885,37 @@ frame = pygame.image.load('data/menu/frame.png')
 red_frame = pygame.image.load('data/menu/red-frame-33-33.png')
 frame_33 = pygame.image.load('data/menu/frame-33-33.png')
 drills_image = pygame.image.load('data/menu/menu_drills.png')
+logistics_blocks_image = pygame.image.load('data/menu/menu_logistics_blocks.png')
 collected_mechanical_drill = pygame.image.load('data/drills/collected_mechanical_drill.png')
 collected_pneumatic_drill = pygame.image.load('data/drills/collected_pneumatic_drill.png')
+rotator_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-rotator.png')
+rotator_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-rotator.png')
+stub_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-top.png')
+stub_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-top.png')
+turrets_image = pygame.image.load('data/menu/menu_turrets.png')
+
+block_1 = pygame.image.load('data/turrets/base_block/block-1.png')
+duo_turret = pygame.image.load('data/turrets/top_part/duo-turret-top.png')
+block_2 = pygame.image.load('data/turrets/base_block/block-2.png')
+scatter = pygame.image.load('data/turrets/top_part/scatter-top.png')
+hail = pygame.image.load('data/turrets/top_part/hail-top.png')
+swarmer = pygame.image.load('data/turrets/top_part/swarmer-top.png')
 base_mechanical_drill = pygame.image.load('data/drills/mechanical-drill.png')
 base_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill.png')
+
+conveyor_0 = pygame.image.load('data/logistics_blocks/conveyor-0-0.png')
+conveyor_1 = pygame.image.load('data/logistics_blocks/conveyor-0-1.png')
+conveyor_2 = pygame.image.load('data/logistics_blocks/conveyor-0-2.png')
+conveyor_3 = pygame.image.load('data/logistics_blocks/conveyor-0-3.png')
+bridge_conveyor = pygame.image.load('data/logistics_blocks/bridge_conveyor.png')
+distributor = pygame.image.load('data/logistics_blocks/distributor.png')
+inverted_sorter = pygame.image.load('data/logistics_blocks/inverted_sorter.png')
+junction = pygame.image.load('data/logistics_blocks/junction.png')
+overflow_gate = pygame.image.load('data/logistics_blocks/overflow_gate.png')
+router = pygame.image.load('data/logistics_blocks/router.png')
+sorter = pygame.image.load('data/logistics_blocks/sorter.png')
+underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
+
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
@@ -578,10 +996,23 @@ ores_to_str = {
     (120, 141, 207): 'titanium',
     (255, 0, 128): 'spawn_mark'
 }
+
 # словарь, переводящий тип блока в его ширину
 type_of_current_block_to_width = {
     'mechanical drill': 2,
-    'pneumatic drill': 2
+    'conveyor': 1,
+    'junction': 1,
+    'router': 1,
+    'distributor': 2,
+    'overflow gate': 1,
+    'underflow gate': 1,
+    'sorter': 1,
+    'bridge conveyor': 1,
+    'pneumatic drill': 2,
+    'double turret': 1,
+    'scatter turret': 2,
+    'hail turret': 1,
+    'swarmer turret': 2
 }
 
 # пиксель под игрока
@@ -605,52 +1036,90 @@ player_image_in_move = pygame.transform.scale(load_image('units/alpha_with_light
 player_x, player_y, level_x, level_y = generate_level(lst_map)
 player = Player(player_x, player_y)
 template_player_x, template_player_y = player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2
+index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
 SPAWN_ENEMY = pygame.USEREVENT + 1
-pygame.time.set_timer(SPAWN_ENEMY, 10)
+pygame.time.set_timer(SPAWN_ENEMY, 100)
 flag = True
+# TODO: Сделать строительство блоков логистики
+# TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
     # индексы персонажа относительно карты
     index_player_x, index_player_y = template_player_x // 32, template_player_y // 32
     # индексы мышки относительно карты
-    index_mouse_x = index_player_x + (mouse_x // 32) - (player.rect.x // 32)
-    index_mouse_y = index_player_y + (mouse_y // 32) - (player.rect.y // 32)
+    index_mouse_x = round(index_player_x + (mouse_x - WIDTH // 2) / 32)
+    index_mouse_y = round(index_player_y + (mouse_y - HEIGHT // 2) / 32)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
+        if event.type == SPAWN_ENEMY and flag:
+            flag = False
+            spawn_enemy()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
                                                                                          top_left_frame_pos,
                                                                                          bottom_left_frame_pos,
                                                                                          *pygame.mouse.get_pos())
 
-            if build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None:
+            if (build and (mouse_x > 320 or mouse_y < HEIGHT - 260) and blocks_type is not None
+                    and not player.is_in_motion):
                 can_build_cur_block = True
+                is_there_resources = False
                 tmp_width_cur_block = type_of_current_block_to_width[type_of_current_block]
-                for i in range(type_of_current_block_to_width[type_of_current_block]):
-                    for j in range(type_of_current_block_to_width[type_of_current_block]):
-                        if board.industry_map[index_mouse_x + i][index_mouse_y + j] is not None:
+
+                for i in range(tmp_width_cur_block):
+                    for j in range(tmp_width_cur_block):
+                        if board.resource_map[index_mouse_y + j][index_mouse_x + i] is not None:
+                            is_there_resources = True
+                    if is_there_resources:
+                        break
+
+                for i in range(tmp_width_cur_block):
+                    for j in range(tmp_width_cur_block):
+                        if board.industry_map[index_mouse_y + i][index_mouse_x + j] is not None:
                             can_build_cur_block = False
+
                 if can_build_cur_block:
                     tmp_class_cur_block = None
-                    if type_of_current_block == 'mechanical drill':
-                        tmp_class_cur_block = MechanicalDrill(pygame.image.load('data/drills/mechanical-drill.png'),
-                                                              index_mouse_x, index_mouse_y)
-                    elif type_of_current_block == 'pneumatic drill':
-                        tmp_class_cur_block = PneumaticDrill(pygame.image.load('data/drills/pneumatic-drill.png'),
-                                                             index_mouse_x, index_mouse_y)
+                    if is_there_resources:
+                        if type_of_current_block == 'mechanical drill':
+                            tmp_class_cur_block = MechanicalDrill(base_mechanical_drill, index_mouse_x, index_mouse_y)
+                        elif type_of_current_block == 'pneumatic drill':
+                            tmp_class_cur_block = PneumaticDrill(base_pneumatic_drill, index_mouse_x, index_mouse_y)
+
+                    if type_of_current_block == 'double turret':
+                        tmp_class_cur_block = DoubleTurret(block_1, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'scatter turret':
+                        tmp_class_cur_block = ScatterTurret(block_2, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'hail turret':
+                        tmp_class_cur_block = HailTurret(block_1, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'swarmer turret':
+                        tmp_class_cur_block = SwarmerTurret(block_2, index_mouse_x, index_mouse_y)
+
+                    # TODO: доработать
+                    if type_of_current_block == 'conveyor':
+                        tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'router':
+                        tmp_class_cur_block = Router(router, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'junction':
+                        tmp_class_cur_block = Junction(junction, index_mouse_x, index_mouse_y)
+                    elif type_of_current_block == 'distributor':
+                        tmp_class_cur_block = Distributor(distributor, index_mouse_x, index_mouse_y)
 
                     if tmp_class_cur_block is not None:
-                        board.append(index_mouse_x, index_mouse_y, tmp_class_cur_block, tmp_width_cur_block)
-        if event.type == SPAWN_ENEMY and flag:
-            spawn_enemy()
-            flag = False
+                        board.append(index_mouse_y, index_mouse_x, tmp_class_cur_block, tmp_width_cur_block)
+
+            if (destroy and (mouse_x > 320 or mouse_y < HEIGHT - 260) and
+                    type(board.industry_map[index_mouse_y][index_mouse_x]) is not Core):
+                if board.industry_map[index_mouse_y][index_mouse_x] is not None:
+                    board.industry_map[index_mouse_y][index_mouse_x].kill()
+                    board.destroy(index_mouse_y, index_mouse_x, board.industry_map[index_mouse_y][index_mouse_x])
 
     # перемещение персонажа
     player.is_in_motion = False
@@ -683,14 +1152,14 @@ while True:
     for sprite in all_sprites:
         camera.apply(sprite)
     # рисуем все группы спрайтов
-    cursor_frame.draw()
     tiles_group.draw(screen)
     resource_tiles_group.draw(screen)
+    industry_tiles_group.update()
     industry_tiles_group.draw(screen)
+    enemy_group.update()
     enemy_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
-    # enemy_group.update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
@@ -699,13 +1168,18 @@ while True:
     dj.update()
 
     cursor_frame.angle_of_rotating_frame += 1
-    cursor_frame.draw()
+    if mouse_x > 320 or mouse_y < HEIGHT - 260:
+        cursor_frame.draw()
 
     # тут рисуем меню
     # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
     screen.blit(menu, (0, HEIGHT - 254))
     if blocks_type == 'drills':
         screen.blit(drills_image, (4, HEIGHT - 250))
+    elif blocks_type == 'logistics blocks':
+        screen.blit(logistics_blocks_image, (4, HEIGHT - 250))
+    elif blocks_type == 'turrets':
+        screen.blit(turrets_image, (4, HEIGHT - 250))
 
     # отрисовка frame
     if right_frame_pos is not None:
