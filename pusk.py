@@ -15,6 +15,7 @@ def image_to_list(file_name):
 
 
 def generate_level(level):
+    global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
     resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
     for y in range(len(level)):
@@ -24,8 +25,8 @@ def generate_level(level):
                     for i in range(3):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
-                    tmp_core = Core(load_image('cores/core_1.png'), x, y)
-                    board.append(y, x, tmp_core, 3)
+                    core = Core(load_image('cores/core_1.png'), x, y)
+                    board.append(y, x, core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
@@ -792,7 +793,7 @@ pygame.init()
 pygame.mixer.init()
 
 # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
-size = WIDTH, HEIGHT = 1280, 960
+size = WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -809,6 +810,7 @@ enemy_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
+resources_menu = pygame.image.load('data/menu/resource_panel.png')
 frame = pygame.image.load('data/menu/frame.png')
 red_frame = pygame.image.load('data/menu/red-frame-33-33.png')
 frame_33 = pygame.image.load('data/menu/frame-33-33.png')
@@ -843,6 +845,18 @@ overflow_gate = pygame.image.load('data/logistics_blocks/overflow_gate.png')
 router = pygame.image.load('data/logistics_blocks/router.png')
 sorter = pygame.image.load('data/logistics_blocks/sorter.png')
 underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
+
+coal_for_menu = pygame.image.load('data/resources/coal.png')
+cooper_for_menu = pygame.image.load('data/resources/copper.png')
+grahite_for_menu = pygame.image.load('data/resources/graphite.png')
+lead_for_menu = pygame.image.load('data/resources/lead.png')
+plastanium_for_menu = pygame.image.load('data/resources/plastanium.png')
+pyratite_for_menu = pygame.image.load('data/resources/pyratite.png')
+sand_for_menu = pygame.image.load('data/resources/sand.png')
+scrap_for_menu = pygame.image.load('data/resources/scrap.png')
+silicon_for_menu = pygame.image.load('data/resources/silicon.png')
+surge_alloy_for_menu = pygame.image.load('data/resources/surge-alloy.png')
+thorium_for_menu = pygame.image.load('data/resources/thorium.png')
 
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
@@ -944,6 +958,20 @@ type_of_current_block_to_width = {
     'swarmer turret': 2
 }
 
+resources_coordinates = {
+    'coal': [coal_for_menu, (314, HEIGHT - 40)],
+    'copper': [cooper_for_menu, (347, HEIGHT - 40)],
+    'graphite': [grahite_for_menu, (380, HEIGHT - 40)],
+    'lead': [lead_for_menu, (413, HEIGHT - 40)],
+    'plastanium': [plastanium_for_menu, (446, HEIGHT - 40)],
+    'pyratite': [pyratite_for_menu, (479, HEIGHT - 40)],
+    'sand': [sand_for_menu, (512, HEIGHT - 40)],
+    'scrap': [scrap_for_menu, (545, HEIGHT - 40)],
+    'silicon': [silicon_for_menu, (578, HEIGHT - 40)],
+    'surge-alloy': [surge_alloy_for_menu, (611, HEIGHT - 40)],
+    'thorium': [thorium_for_menu, (644, HEIGHT - 40)]
+}
+
 # пиксель под игрока
 player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
 # Для работы с картами
@@ -955,6 +983,7 @@ dj = DJ()
 board = Board()
 camera = Camera()
 cursor_frame = CursorFrame()
+core = None
 
 # ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
 # (136, 0, 21): player
@@ -970,6 +999,7 @@ pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
+core.resource['sand'] += 1
 SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
@@ -1111,6 +1141,11 @@ while True:
     elif blocks_type == 'turrets':
         screen.blit(turrets_image, (4, HEIGHT - 250))
 
+    # меню ресурсов
+    screen.blit(resources_menu, (313, HEIGHT - 125))
+    for res in core.resource:
+        if core.resource[res]:
+            screen.blit(resources_coordinates[res][0], resources_coordinates[res][1])
     # отрисовка frame
     if right_frame_pos is not None:
         screen.blit(frame, right_frame_pos)
