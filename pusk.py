@@ -639,7 +639,7 @@ class Core(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
         self.hp = 250
         self.level = 1
-        self.resource = {
+        self.resources = {
             'coal': 0,
             'copper': 0,
             'graphite': 0,
@@ -661,12 +661,18 @@ class Core(pygame.sprite.Sprite):
         """Сюда передавать cловарь(строчка: кол-во ресурсов) или список(песок, медь, свинец). Данный метод будет
         принимать данные ресурсы и записывать к себе в словарь."""
         for el in args:
-            self.resource[el] += 1
+            self.resources[el] += 1
         for el in kwargs:
-            self.resource[el] += kwargs[el]
+            self.resources[el] += kwargs[el]
 
     def update(self):
         pass
+
+    def can_take_resource(self):
+        return True
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        self.resources[resource] += 1
 
 
 class MechanicalDrill(pygame.sprite.Sprite):
@@ -694,8 +700,8 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
-    def logistic_update(self):
-        pass
+    def can_take_resource(self):
+        return False
 
     def update(self):
         self.update_draw()
@@ -726,6 +732,9 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
 
+    def can_take_resource(self):
+        return False
+
     def update(self):
         self.update_draw()
 
@@ -745,6 +754,8 @@ class Conveyor(pygame.sprite.Sprite):
         self.resources = [None, None, None]
         # направление - north, south, west and east
         self.direction = direction
+        self.ind_x = ind_x
+        self.ind_y = ind_y
 
     def update_draw(self):
         self.image = self.anim_images[current_anim_img_conv]
@@ -754,9 +765,25 @@ class Conveyor(pygame.sprite.Sprite):
             self.image = pygame.transform.rotate(self.image.copy(), 180)
         elif self.direction == 'south':
             self.image = pygame.transform.rotate(self.image.copy(), 270)
+        # TODO: доделать эту хреновину
+        # for i in rande(len(self.resources)):
+        #     if el == 'copper':
+        #         self.image.blit(copper, (i * 9, 0))
+        #     elif el == 'coal':
+        #         self.image.blit(copper, (i * 9, 0))
 
     def update(self):
+        # logic update
         self.update_draw()
+
+    def can_take_resource(self):
+        if self.resources[-1] is not None:
+            return False
+        return True
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        if resource is not None:
+            self.resources[-1] = resource
 
 
 class Junction(pygame.sprite.Sprite):
@@ -772,6 +799,12 @@ class Junction(pygame.sprite.Sprite):
         self.width = 1
 
     def update(self):
+        pass
+
+    def can_take_resource(self):
+        return False
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
         pass
 
 
@@ -790,6 +823,12 @@ class Router(pygame.sprite.Sprite):
     def update(self):
         pass
 
+    def can_take_resource(self):
+        return False
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        pass
+
 
 class Distributor(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -804,6 +843,12 @@ class Distributor(pygame.sprite.Sprite):
         self.width = 2
 
     def update(self):
+        pass
+
+    def can_take_resource(self):
+        return False
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
         pass
 
 
@@ -863,6 +908,18 @@ overflow_gate = pygame.image.load('data/logistics_blocks/overflow_gate.png')
 router = pygame.image.load('data/logistics_blocks/router.png')
 sorter = pygame.image.load('data/logistics_blocks/sorter.png')
 underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
+
+coal = pygame.image.load('data/resources/coal.png')
+copper = pygame.image.load('data/resources/copper.png')
+graphite = pygame.image.load('data/resources/graphite.png')
+lead = pygame.image.load('data/resources/lead.png')
+plastanium = pygame.image.load('data/resources/plastanium.png')
+pyratite = pygame.image.load('data/resources/pyratite.png')
+sand = pygame.image.load('data/resources/sand.png')
+scrap = pygame.image.load('data/resources/scrap.png')
+silicon = pygame.image.load('data/resources/silicon.png')
+surge_alloy = pygame.image.load('data/resources/surge-alloy.png')
+thorium = pygame.image.load('data/resources/thorium.png')
 
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
@@ -998,7 +1055,7 @@ CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
-
+# TODO: сделать методы can_take_resource(self); logical_update(self).
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
