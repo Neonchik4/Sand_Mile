@@ -209,8 +209,8 @@ class Dagger(pygame.sprite.Sprite):
     def update(self):
         # Find direction vector (dx, dy) between enemy and player.
         dx, dy = player.rect.x + player.rect.w // 2 - (
-                    self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (
-                             self.rect.y + self.rect.h // 2)
+                self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (
+                         self.rect.y + self.rect.h // 2)
         dist = math.hypot(dx, dy)
         if dist != 0:
             dx, dy = dx / dist, dy / dist  # Normalize.
@@ -361,6 +361,9 @@ class DoubleTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
+    def logic_update(self):
+        pass
+
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -396,6 +399,9 @@ class ScatterTurret(pygame.sprite.Sprite):
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
+
+    def logic_update(self):
+        pass
 
     def decrease_health(self, a):
         self.health -= a
@@ -433,6 +439,9 @@ class HailTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
+    def logic_update(self):
+        pass
+
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -468,6 +477,9 @@ class SwarmerTurret(pygame.sprite.Sprite):
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
+
+    def logic_update(self):
+        pass
 
     def decrease_health(self, a):
         self.health -= a
@@ -657,6 +669,9 @@ class Core(pygame.sprite.Sprite):
     def kill_myself(self):
         self.kill()
 
+    def logic_update(self):
+        pass
+
     def get_resources(self, *args, **kwargs):
         """Сюда передавать cловарь(строчка: кол-во ресурсов) или список(песок, медь, свинец). Данный метод будет
         принимать данные ресурсы и записывать к себе в словарь."""
@@ -689,8 +704,19 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.angle = 0.0
         self.orig_rotate_img = rotator_mechanical_drill.copy()
         self.delta_rotating = 5.0
-        self.resources = {}
         self.width = 2  # отвечает за ширину блока в клетках
+        self.speed_of_mining = 0.06
+        try:
+            tmp_1 = board.resource_map[ind_y][ind_x]
+            tmp_2 = board.resource_map[ind_y][ind_x + 1]
+            tmp_3 = board.resource_map[ind_y + 1][ind_x]
+            tmp_4 = board.resource_map[ind_y + 1][ind_x + 1]
+        except:
+            print('С выбранным ресурсом что-то не так!')
+        self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        while self.extraction_resource is None:
+            self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        self.resources = {self.extraction_resource: 0}
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -703,8 +729,14 @@ class MechanicalDrill(pygame.sprite.Sprite):
     def can_take_resource(self):
         return False
 
+    def logic_update(self):
+        self.resources[self.extraction_resource] += self.speed_of_mining
+        if self.resources[self.extraction_resource] > 20:
+            self.resources[self.extraction_resource] = 20
+
     def update(self):
         self.update_draw()
+        print(self.__repr__(), self.resources)
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
@@ -721,8 +753,19 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.angle = 0.0
         self.orig_rotate_img = rotator_pneumatic_drill.copy()
         self.delta_rotating = 5.0
-        self.resources = {}
         self.width = 2  # отвечает за ширину блока в клетках
+        self.speed_of_mining = 0.08
+        try:
+            tmp_1 = board.resource_map[ind_y][ind_x]
+            tmp_2 = board.resource_map[ind_y][ind_x + 1]
+            tmp_3 = board.resource_map[ind_y + 1][ind_x]
+            tmp_4 = board.resource_map[ind_y + 1][ind_x + 1]
+        except:
+            print('С выбранным ресурсом что-то не так!')
+        self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        while self.extraction_resource is None:
+            self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        self.resources = {self.extraction_resource: 0}
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -732,11 +775,17 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
 
+    def logic_update(self):
+        self.resources[self.extraction_resource] += self.speed_of_mining
+        if self.resources[self.extraction_resource] > 20:
+            self.resources[self.extraction_resource] = 20
+
     def can_take_resource(self):
         return False
 
     def update(self):
         self.update_draw()
+        print(self.__repr__(), self.resources)
 
 
 class Conveyor(pygame.sprite.Sprite):
@@ -1168,6 +1217,10 @@ while True:
     enemy_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
+
+    # логистика
+    for el in industry_tiles_group:
+        el.logic_update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
