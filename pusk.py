@@ -15,7 +15,6 @@ def image_to_list(file_name):
 
 
 def generate_level(level):
-    global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
     resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
     for y in range(len(level)):
@@ -25,8 +24,8 @@ def generate_level(level):
                     for i in range(3):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
-                    core = Core(load_image('cores/core_1.png'), x, y)
-                    board.append(y, x, core, 3)
+                    tmp_core = Core(load_image('cores/core_1.png'), x, y)
+                    board.append(y, x, tmp_core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
@@ -209,7 +208,9 @@ class Dagger(pygame.sprite.Sprite):
 
     def update(self):
         # Find direction vector (dx, dy) between enemy and player.
-        dx, dy = player.rect.x + player.rect.w // 2 - (self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (self.rect.y + self.rect.h // 2)
+        dx, dy = player.rect.x + player.rect.w // 2 - (
+                self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (
+                         self.rect.y + self.rect.h // 2)
         dist = math.hypot(dx, dy)
         if dist != 0:
             dx, dy = dx / dist, dy / dist  # Normalize.
@@ -360,6 +361,9 @@ class DoubleTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
+    def logic_update(self):
+        pass
+
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -395,6 +399,9 @@ class ScatterTurret(pygame.sprite.Sprite):
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
+
+    def logic_update(self):
+        pass
 
     def decrease_health(self, a):
         self.health -= a
@@ -432,6 +439,9 @@ class HailTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
+    def logic_update(self):
+        pass
+
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -468,6 +478,9 @@ class SwarmerTurret(pygame.sprite.Sprite):
     def attack(self, obj):
         obj.decrease_health(self.damage)
 
+    def logic_update(self):
+        pass
+
     def decrease_health(self, a):
         self.health -= a
         if self.health <= 0:
@@ -487,7 +500,7 @@ class SwarmerTurret(pygame.sprite.Sprite):
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
-    global destroy, build, blocks_type, type_of_current_block
+    global destroy, build, blocks_type, type_of_current_block, rotate_arrow, arrow_direction
     mouse_x, mouse_y = pos_mouse
     # задействуем правую часть меню
     if 214 <= mouse_x <= 309 and HEIGHT - 250 <= mouse_y <= HEIGHT - 5:
@@ -597,6 +610,17 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         else:
             pos3 = None
 
+        if 106 <= mouse_x <= 156:
+            if arrow_direction == 'east':
+                arrow_direction = 'north'
+            elif arrow_direction == 'north':
+                arrow_direction = 'west'
+            elif arrow_direction == 'west':
+                arrow_direction = 'south'
+            elif arrow_direction == 'south':
+                arrow_direction = 'east'
+            rotate_arrow = pygame.transform.rotate(rotate_arrow.copy(), 90)
+
     return pos1, pos2, pos3
 
 
@@ -627,7 +651,7 @@ class Core(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(ind_x * tile_width, ind_y * tile_height)
         self.hp = 250
         self.level = 1
-        self.resource = {
+        self.resources = {
             'coal': 0,
             'copper': 0,
             'graphite': 0,
@@ -645,16 +669,25 @@ class Core(pygame.sprite.Sprite):
     def kill_myself(self):
         self.kill()
 
+    def logic_update(self):
+        pass
+
     def get_resources(self, *args, **kwargs):
         """Сюда передавать cловарь(строчка: кол-во ресурсов) или список(песок, медь, свинец). Данный метод будет
         принимать данные ресурсы и записывать к себе в словарь."""
         for el in args:
-            self.resource[el] += 1
+            self.resources[el] += 1
         for el in kwargs:
-            self.resource[el] += kwargs[el]
+            self.resources[el] += kwargs[el]
 
     def update(self):
         pass
+
+    def can_take_resource(self):
+        return True
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        self.resources[resource] += 1
 
 
 class MechanicalDrill(pygame.sprite.Sprite):
@@ -673,6 +706,18 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.delta_rotating = 5.0
         self.resources = {}
         self.width = 2  # отвечает за ширину блока в клетках
+        self.speed_of_mining = 0.06
+        try:
+            tmp_1 = board.resource_map[ind_y][ind_x]
+            tmp_2 = board.resource_map[ind_y][ind_x + 1]
+            tmp_3 = board.resource_map[ind_y + 1][ind_x]
+            tmp_4 = board.resource_map[ind_y + 1][ind_x + 1]
+        except:
+            print('С выбранным ресурсом что-то не так!')
+        self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        while self.extraction_resource is None:
+            self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        self.resources = {self.extraction_resource: 0}
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -682,11 +727,17 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
-    def logistic_update(self):
-        pass
+    def can_take_resource(self):
+        return False
+
+    def logic_update(self):
+        self.resources[self.extraction_resource] += self.speed_of_mining
+        if self.resources[self.extraction_resource] > 20:
+            self.resources[self.extraction_resource] = 20
 
     def update(self):
         self.update_draw()
+        print(self.__repr__(), self.resources)
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
@@ -705,6 +756,18 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.delta_rotating = 5.0
         self.resources = {}
         self.width = 2  # отвечает за ширину блока в клетках
+        self.speed_of_mining = 0.08
+        try:
+            tmp_1 = board.resource_map[ind_y][ind_x]
+            tmp_2 = board.resource_map[ind_y][ind_x + 1]
+            tmp_3 = board.resource_map[ind_y + 1][ind_x]
+            tmp_4 = board.resource_map[ind_y + 1][ind_x + 1]
+        except:
+            print('С выбранным ресурсом что-то не так!')
+        self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        while self.extraction_resource is None:
+            self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
+        self.resources = {self.extraction_resource: 0}
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -713,6 +776,14 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(base_pneumatic_drill, (0, 0))
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
+
+    def logic_update(self):
+        self.resources[self.extraction_resource] += self.speed_of_mining
+        if self.resources[self.extraction_resource] > 20:
+            self.resources[self.extraction_resource] = 20
+
+    def can_take_resource(self):
+        return False
 
     def update(self):
         self.update_draw()
@@ -732,13 +803,37 @@ class Conveyor(pygame.sprite.Sprite):
         self.anim_images = [conveyor_0, conveyor_1, conveyor_2, conveyor_3]
         self.resources = [None, None, None]
         # направление - north, south, west and east
-        self.direction = ''
+        self.direction = direction
+        self.ind_x = ind_x
+        self.ind_y = ind_y
 
     def update_draw(self):
         self.image = self.anim_images[current_anim_img_conv]
+        if self.direction == 'north':
+            self.image = pygame.transform.rotate(self.image.copy(), 90)
+        elif self.direction == 'west':
+            self.image = pygame.transform.rotate(self.image.copy(), 180)
+        elif self.direction == 'south':
+            self.image = pygame.transform.rotate(self.image.copy(), 270)
+        # TODO: доделать эту хреновину
+        # for i in rande(len(self.resources)):
+        #     if el == 'copper':
+        #         self.image.blit(copper, (i * 9, 0))
+        #     elif el == 'coal':
+        #         self.image.blit(copper, (i * 9, 0))
 
     def update(self):
+        # logic update
         self.update_draw()
+
+    def can_take_resource(self):
+        if self.resources[-1] is not None:
+            return False
+        return True
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        if resource is not None:
+            self.resources[-1] = resource
 
 
 class Junction(pygame.sprite.Sprite):
@@ -754,6 +849,12 @@ class Junction(pygame.sprite.Sprite):
         self.width = 1
 
     def update(self):
+        pass
+
+    def can_take_resource(self):
+        return False
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
         pass
 
 
@@ -772,6 +873,12 @@ class Router(pygame.sprite.Sprite):
     def update(self):
         pass
 
+    def can_take_resource(self):
+        return False
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        pass
+
 
 class Distributor(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -788,12 +895,18 @@ class Distributor(pygame.sprite.Sprite):
     def update(self):
         pass
 
+    def can_take_resource(self):
+        return False
+
+    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+        pass
+
 
 pygame.init()
 pygame.mixer.init()
 
 # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
-size = WIDTH, HEIGHT = 1280, 720
+size = WIDTH, HEIGHT = 1280, 960
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -823,6 +936,7 @@ rotator_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-rotator
 stub_mechanical_drill = pygame.image.load('data/drills/mechanical-drill-top.png')
 stub_pneumatic_drill = pygame.image.load('data/drills/pneumatic-drill-top.png')
 turrets_image = pygame.image.load('data/menu/menu_turrets.png')
+rotate_arrow = pygame.image.load('data/menu/rotate-arrow.png')
 
 block_1 = pygame.image.load('data/turrets/base_block/block-1.png')
 duo_turret = pygame.image.load('data/turrets/top_part/duo-turret-top.png')
@@ -858,11 +972,25 @@ silicon_for_menu = pygame.image.load('data/resources/silicon.png')
 surge_alloy_for_menu = pygame.image.load('data/resources/surge-alloy.png')
 thorium_for_menu = pygame.image.load('data/resources/thorium.png')
 
+coal = pygame.image.load('data/resources/coal.png')
+copper = pygame.image.load('data/resources/copper.png')
+graphite = pygame.image.load('data/resources/graphite.png')
+lead = pygame.image.load('data/resources/lead.png')
+plastanium = pygame.image.load('data/resources/plastanium.png')
+pyratite = pygame.image.load('data/resources/pyratite.png')
+sand = pygame.image.load('data/resources/sand.png')
+scrap = pygame.image.load('data/resources/scrap.png')
+silicon = pygame.image.load('data/resources/silicon.png')
+surge_alloy = pygame.image.load('data/resources/surge-alloy.png')
+thorium = pygame.image.load('data/resources/thorium.png')
+
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
 type_of_current_block = None
 current_anim_img_conv = 0
 build, destroy = False, False
+is_there_arrow = False
+arrow_direction = 'east'
 
 # r, g, b для каждого tile
 tiles_images = {
@@ -1006,7 +1134,7 @@ CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
-
+# TODO: сделать методы can_take_resource(self); logical_update(self).
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -1064,7 +1192,7 @@ while True:
 
                     # TODO: доработать
                     if type_of_current_block == 'conveyor':
-                        tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y)
+                        tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y, arrow_direction)
                     elif type_of_current_block == 'router':
                         tmp_class_cur_block = Router(router, index_mouse_x, index_mouse_y)
                     elif type_of_current_block == 'junction':
@@ -1121,6 +1249,10 @@ while True:
     player_group.draw(screen)
     player.rotate_towards_mouse()
 
+    # логистика
+    for el in industry_tiles_group:
+        el.logic_update()
+
     # саундтрек
     tmp = random.randrange(0, 5000)
     if tmp == 1 and not soundtrack.get_busy():
@@ -1153,6 +1285,10 @@ while True:
         screen.blit(frame, top_left_frame_pos)
     if bottom_left_frame_pos is not None:
         screen.blit(frame, bottom_left_frame_pos)
+
+    # рисуем стрелочку направления конвеера
+    if type_of_current_block == 'conveyor' and blocks_type == 'logistics blocks':
+        screen.blit(rotate_arrow, (114, HEIGHT - 45))
 
     if pygame.mouse.get_focused():
         pygame.mouse.set_visible(False)
