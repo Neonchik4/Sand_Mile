@@ -153,10 +153,6 @@ class Player(pygame.sprite.Sprite):
         self.is_in_motion = False
         self.health = 100
         self.rect = self.image.get_rect().move(self.x, self.y)
-        # print(self.x, self.y)
-        # print()
-        # print(self.rect[0], self.rect[1])
-        # в комментариях лежит магический фокус
         self.orig = self.image
 
     def rotate_towards_mouse(self):
@@ -610,7 +606,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         else:
             pos3 = None
 
-        if 106 <= mouse_x <= 156:
+        if 106 <= mouse_x <= 156 and type_of_current_block == 'conveyor':
             if arrow_direction == 'east':
                 arrow_direction = 'north'
             elif arrow_direction == 'north':
@@ -705,7 +701,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_mechanical_drill.copy()
         self.delta_rotating = 5.0
         self.width = 2  # отвечает за ширину блока в клетках
-        self.speed_of_mining = 0.06
+        self.speed_of_mining = 0.8
         try:
             tmp_1 = board.resource_map[ind_y][ind_x]
             tmp_2 = board.resource_map[ind_y][ind_x + 1]
@@ -736,7 +732,6 @@ class MechanicalDrill(pygame.sprite.Sprite):
 
     def update(self):
         self.update_draw()
-        print(self.__repr__(), self.resources)
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
@@ -754,7 +749,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_pneumatic_drill.copy()
         self.delta_rotating = 5.0
         self.width = 2  # отвечает за ширину блока в клетках
-        self.speed_of_mining = 0.08
+        self.speed_of_mining = 1.2
         try:
             tmp_1 = board.resource_map[ind_y][ind_x]
             tmp_2 = board.resource_map[ind_y][ind_x + 1]
@@ -785,7 +780,6 @@ class PneumaticDrill(pygame.sprite.Sprite):
 
     def update(self):
         self.update_draw()
-        print(self.__repr__(), self.resources)
 
 
 class Conveyor(pygame.sprite.Sprite):
@@ -1102,6 +1096,8 @@ SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
+LOGIC_UPDATE_FOR_DRILLS = pygame.USEREVENT + 3
+pygame.time.set_timer(LOGIC_UPDATE_FOR_DRILLS, 1000)
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 # TODO: сделать методы can_take_resource(self); logical_update(self).
@@ -1119,6 +1115,10 @@ while True:
             terminate()
         if event.type == CHANGE_CONVEYOR_ANIM:
             current_anim_img_conv = (current_anim_img_conv + 1) % 4
+        if event.type == LOGIC_UPDATE_FOR_DRILLS:
+            for el in industry_tiles_group:
+                if type(el) is PneumaticDrill or type(el) is MechanicalDrill:
+                    el.logic_update()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
                                                                                          top_left_frame_pos,
@@ -1217,10 +1217,6 @@ while True:
     enemy_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
-
-    # логистика
-    for el in industry_tiles_group:
-        el.logic_update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
