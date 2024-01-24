@@ -36,8 +36,12 @@ def generate_level(level):
                     Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
+                board.industry_map[0][0] = 'blocked'
+
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
                 board.resource_map[y][x] = 'sand'
+            if level[y][x] in blocked_blocks:
+                board.industry_map[y][x] = 'blocked'
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -1030,6 +1034,11 @@ tiles_images = {
     (146, 94, 70): [load_image('tiles/wall_blocks/yellow-stone-wall1.png'),
                     load_image('tiles/wall_blocks/yellow-stone-wall2.png')],
 }
+
+# r, g, b
+blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66), (218, 181, 96),
+                  (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
+
 # если не знаем какой это пиксель, берём случайный из этих
 default_pixels = [(127, 127, 127), (120, 120, 120), (60, 56, 56)]
 # словарь цветов для руд
