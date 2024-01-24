@@ -154,10 +154,6 @@ class Player(pygame.sprite.Sprite):
         self.is_in_motion = False
         self.health = 100
         self.rect = self.image.get_rect().move(self.x, self.y)
-        # print(self.x, self.y)
-        # print()
-        # print(self.rect[0], self.rect[1])
-        # в комментариях лежит магический фокус
         self.orig = self.image
 
     def rotate_towards_mouse(self):
@@ -705,7 +701,6 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.angle = 0.0
         self.orig_rotate_img = rotator_mechanical_drill.copy()
         self.delta_rotating = 5.0
-        self.resources = {}
         self.width = 2  # отвечает за ширину блока в клетках
         self.speed_of_mining = 0.06
         try:
@@ -738,7 +733,6 @@ class MechanicalDrill(pygame.sprite.Sprite):
 
     def update(self):
         self.update_draw()
-        print(self.__repr__(), self.resources)
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
@@ -755,9 +749,8 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.angle = 0.0
         self.orig_rotate_img = rotator_pneumatic_drill.copy()
         self.delta_rotating = 5.0
-        self.resources = {}
         self.width = 2  # отвечает за ширину блока в клетках
-        self.speed_of_mining = 0.08
+        self.speed_of_mining = 1.2
         try:
             tmp_1 = board.resource_map[ind_y][ind_x]
             tmp_2 = board.resource_map[ind_y][ind_x + 1]
@@ -907,7 +900,7 @@ pygame.init()
 pygame.mixer.init()
 
 # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
-size = WIDTH, HEIGHT = 1280, 720
+size = WIDTH, HEIGHT = 1280, 960
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -924,7 +917,6 @@ enemy_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
-resources_menu = pygame.image.load('data/menu/resource_panel.png')
 frame = pygame.image.load('data/menu/frame.png')
 red_frame = pygame.image.load('data/menu/red-frame-33-33.png')
 frame_33 = pygame.image.load('data/menu/frame-33-33.png')
@@ -1138,6 +1130,8 @@ SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
+LOGIC_UPDATE_FOR_DRILLS = pygame.USEREVENT + 3
+pygame.time.set_timer(LOGIC_UPDATE_FOR_DRILLS, 1000)
 
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
@@ -1197,7 +1191,6 @@ while True:
                     elif type_of_current_block == 'swarmer turret':
                         tmp_class_cur_block = SwarmerTurret(block_2, index_mouse_x, index_mouse_y)
 
-                    # TODO: доработать
                     if type_of_current_block == 'conveyor':
                         tmp_class_cur_block = Conveyor(conveyor_0, index_mouse_x, index_mouse_y, arrow_direction)
                     elif type_of_current_block == 'router':
@@ -1255,10 +1248,6 @@ while True:
     enemy_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
-
-    # логистика
-    for el in industry_tiles_group:
-        el.logic_update()
 
     # саундтрек
     tmp = random.randrange(0, 5000)
