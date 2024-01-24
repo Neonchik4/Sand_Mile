@@ -27,10 +27,9 @@ def generate_level(level):
                     tmp_core = Core(load_image('cores/core_1.png'), x, y)
                     board.append(y, x, tmp_core, 3)
                 elif level[y][x] in tiles_images:
-                    # Tile(level[y][x], x, y)
+                    Tile(level[y][x], x, y)
                     if level[y][x] in tile_wall:
                         InvisibleWall(x, y)
-                        print(x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
                     Tile(player_pixel, x, y)
                     new_player = (x, y)
@@ -191,13 +190,12 @@ def get_pos_core():
                     return i, j
 
 
-# TODO: сделать спавн в опр радиусе
-# Пока в определом месте, потом пройдемся по карте и найдем место спавна
 def spawn_enemy():
     y, x = get_pos_spawn_mark()
-    units = [Dagger, Crawler, Nova]
-    for i in range(20):
-        y_t, x_t = random.randint(y - 5, y + 5), random.randint(x - 5, x + 5)
+    # units = [Dagger, Crawler, Nova]
+    units = [Dagger]
+    for _ in range(11):
+        y_t, x_t = random.randint(y, y + 6), random.randint(x, x + 6)
         random.choice(units)(x_t, y_t)
 
 
@@ -217,12 +215,6 @@ class Dagger(pygame.sprite.Sprite):
         self.rect.y += dy
 
     def update(self):
-        '''
-        flag = True
-        if flag:
-            flag = False
-            self.shoot()
-        '''
         core_x, core_y = get_pos_core()
         core = board.industry_map[core_x][core_y]
         self.move_to_base(core)
@@ -243,8 +235,22 @@ class Dagger(pygame.sprite.Sprite):
             return
         if dist != 0:
             dx, dy = dx / dist, dy / dist
-        self.rect.x += dx * self.speed
-        self.rect.y += dy * self.speed
+        if t := pygame.sprite.spritecollideany(self, invisible_group):
+            col_x = t.rect.x
+            col_y = t.rect.y
+            if col_x >= self.rect.x:
+                self.rect.x -= col_x - self.rect.x
+            if col_x <= self.rect.x:
+                self.rect.x += self.rect.x - col_x
+            # TODO: Рассмотреть когда равны координаты x
+            # Может быть использовать лучи для проверки в какую сторону надо пойти
+            if col_x == self.rect.x:
+                self.rect.x += -32
+            # self.rect.x += self.rect.x + 0.5 * self.t
+            # self.t *= -1
+        else:
+            self.rect.x += dx * self.speed
+            self.rect.y += dy * self.speed
 
     def attack(self, target):
         ...
@@ -269,6 +275,15 @@ class Crawler(pygame.sprite.Sprite):
         self.rect.y += dy
 
     def update(self):
+        if t := pygame.sprite.spritecollideany(self, invisible_group):
+            col_x = t.rect.x
+            col_y = t.rect.y
+            if col_x > self.rect.x:
+                self.rect.x -= col_x - self.rect.x
+            if col_x < self.rect.x:
+                self.rect.x += self.rect.x - col_x
+            # self.rect.x += self.rect.x + 0.5 * self.t
+            # self.t *= -1
         core_x, core_y = get_pos_core()
         core = board.industry_map[core_x][core_y]
         self.move_to_base(core)
@@ -309,6 +324,15 @@ class Nova(pygame.sprite.Sprite):
         self.rect.y += dy
 
     def update(self):
+        if t := pygame.sprite.spritecollideany(self, invisible_group):
+            col_x = t.rect.x
+            col_y = t.rect.y
+            if col_x > self.rect.x:
+                self.rect.x -= col_x - self.rect.x
+            if col_x < self.rect.x:
+                self.rect.x += self.rect.x - col_x
+            # self.rect.x += self.rect.x + 0.5 * self.t
+            # self.t *= -1
         core_x, core_y = get_pos_core()
         core = board.industry_map[core_x][core_y]
         self.move_to_base(core)
@@ -377,10 +401,9 @@ class Button:
 
 class InvisibleWall(pygame.sprite.Sprite):
     def __init__(self, x, y):
-        super().__init__(invisible_group)
-        self.rect = pygame.Rect(tile_width * x, tile_height * y, 32, 32)
-        pygame.draw.rect(screen, (200, 200, 200), self.rect, 1)
-        print(self.rect.x, self.rect.y)
+        super().__init__(invisible_group, all_sprites)
+        self.image = load_image("tiles/wall_blocks/dirt-wall2.png")
+        self.rect = self.image.get_rect().move(tile_width * x, tile_height * y)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -1027,7 +1050,7 @@ pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
 
 tile_width = tile_height = 32
-STEP = 7
+STEP = 100
 FPS = 50
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
@@ -1250,7 +1273,6 @@ while True:
     # индексы мышки относительно карты
     index_mouse_x = math.floor((template_player_x + mouse_x - WIDTH / 2) / 32)
     index_mouse_y = math.floor((template_player_y + mouse_y - HEIGHT / 2) / 32)
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
