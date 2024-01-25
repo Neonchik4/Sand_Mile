@@ -687,7 +687,8 @@ class Core(pygame.sprite.Sprite):
         return True
 
     def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
-        self.resources[resource] += 1
+        if resource is not None:
+            self.resources[resource] += 1
 
 
 class MechanicalDrill(pygame.sprite.Sprite):
@@ -718,6 +719,11 @@ class MechanicalDrill(pygame.sprite.Sprite):
             self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
         self.resources = {self.extraction_resource: 0}
 
+        # эта штука под соседние клетки куда будем скидывать ресурсы
+        self.lst_neighboring_cells = [(ind_x, ind_y - 1), (ind_x + 1, ind_y - 1), (ind_x - 1, ind_y),
+                                      (ind_x + 2, ind_y), (ind_x - 1, ind_y + 1), (ind_x + 2, ind_y + 1),
+                                      (ind_x, ind_y + 2), (ind_x + 1, ind_y + 2)]
+
     def update_draw(self):
         self.angle += self.delta_rotating
         rotated_img = pygame.transform.rotate(self.orig_rotate_img, self.angle)
@@ -733,6 +739,17 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.resources[self.extraction_resource] += self.speed_of_mining
         if self.resources[self.extraction_resource] > 20:
             self.resources[self.extraction_resource] = 20
+
+        if self.resources[self.extraction_resource] > 0:
+            cur_blocks = []
+            for x, y in self.lst_neighboring_cells:
+                if board.industry_map[y][x] is not None and board.industry_map[y][x] is not str:
+                    if board.industry_map[y][x].can_take_resource():
+                        cur_blocks.append(board.industry_map[y][x])
+
+            if cur_blocks:
+                block = random.choice(cur_blocks)
+                block.take_resource(self.extraction_resource)
 
     def update(self):
         self.update_draw()
@@ -787,6 +804,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
 
 
 class Conveyor(pygame.sprite.Sprite):
+    # TODO: убрать всё к чертям, чтобы не мазолило глаз: ресурс на конвеере только один
     def __init__(self, img, ind_x, ind_y, direction):
         super().__init__(industry_tiles_group, all_sprites)
         self.image = img.copy()
@@ -798,14 +816,15 @@ class Conveyor(pygame.sprite.Sprite):
         self.rect.y += dy
         self.width = 1
         self.anim_images = [conveyor_0, conveyor_1, conveyor_2, conveyor_3]
-        self.resources = [None, None, None]
+        self.resources = [None, None]
         # направление - north, south, west and east
         self.direction = direction
         self.ind_x = ind_x
         self.ind_y = ind_y
+        self.zick_zack = False
 
     def update_draw(self):
-        self.image = self.anim_images[current_anim_img_conv]
+        self.image = self.anim_images[current_anim_img_conv].copy()
         if self.direction == 'north':
             self.image = pygame.transform.rotate(self.image.copy(), 90)
         elif self.direction == 'west':
@@ -813,24 +832,46 @@ class Conveyor(pygame.sprite.Sprite):
         elif self.direction == 'south':
             self.image = pygame.transform.rotate(self.image.copy(), 270)
         # TODO: доделать эту хреновину
-        # for i in rande(len(self.resources)):
-        #     if el == 'copper':
-        #         self.image.blit(copper, (i * 9, 0))
-        #     elif el == 'coal':
-        #         self.image.blit(copper, (i * 9, 0))
+        for i in range(len(self.resources)):
+            if self.resources[i] == 'copper':
+                self.image.blit(copper.copy(), (i * 9, 0))
+            elif self.resources[i] == 'coal':
+                self.image.blit(coal.copy(), (i * 9, 0))
+            elif self.resources[i] == 'lead':
+                self.image.blit(lead.copy(), (i * 9, 0))
 
     def update(self):
         # logic update
         self.update_draw()
 
     def can_take_resource(self):
-        if self.resources[-1] is not None:
+        if self.resources[0] is not None:
             return False
         return True
 
+    def logic_update(self):
+        if self.zick_zack:
+            if self.resources[1] is None:
+                self.resources[1] = self.resources[0]
+                self.resources[0] = None
+        else:
+            if self.direction == 'north':
+                if (board.industry_map[self.ind_y - 1][self.ind_x] is not str and
+                        board.industry_map[self.ind_y - 1][self.ind_x] is not None):
+                    if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource():
+                        board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.resources[-1])
+                        self.resources[-1] = None
+            elif self.direction == 'east':
+                if (board.industry_map[self.ind_y][self.ind_x + 1] is not str and
+                        board.industry_map[self.ind_y][self.ind_x + 1] is not None):
+                    if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource():
+                        board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.resources[-1])
+                        self.resources[-1] = None
+        self.zick_zack = not self.zick_zack
+
     def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
         if resource is not None:
-            self.resources[-1] = resource
+            self.resources[0] = resource
 
 
 class Junction(pygame.sprite.Sprite):
@@ -956,8 +997,8 @@ router = pygame.image.load('data/logistics_blocks/router.png')
 sorter = pygame.image.load('data/logistics_blocks/sorter.png')
 underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
 
-coal = pygame.image.load('data/resources/coal.png')
-copper = pygame.image.load('data/resources/copper.png')
+coal = pygame.transform.scale(pygame.image.load('data/resources/coal.png'), (16, 16))
+copper = pygame.transform.scale(pygame.image.load('data/resources/copper.png'), (22, 22))
 graphite = pygame.image.load('data/resources/graphite.png')
 lead = pygame.image.load('data/resources/lead.png')
 plastanium = pygame.image.load('data/resources/plastanium.png')
@@ -1023,7 +1064,8 @@ tiles_images = {
 }
 
 # r, g, b
-blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66), (218, 181, 96),
+blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66),
+                  (218, 181, 96),
                   (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
 
 # если не знаем какой это пиксель, берём случайный из этих
@@ -1105,9 +1147,10 @@ SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
-LOGIC_UPDATE_FOR_DRILLS = pygame.USEREVENT + 3
-pygame.time.set_timer(LOGIC_UPDATE_FOR_DRILLS, 1000)
-# TODO: Сделать строительство блоков логистики
+LOGIC_UPDATE = pygame.USEREVENT + 3
+pygame.time.set_timer(LOGIC_UPDATE, 1000)
+LOGIC_UPDATE_CONVEYOR = pygame.USEREVENT + 4
+pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 200)
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 # TODO: сделать методы can_take_resource(self); logical_update(self).
 while True:
@@ -1124,9 +1167,13 @@ while True:
             terminate()
         if event.type == CHANGE_CONVEYOR_ANIM:
             current_anim_img_conv = (current_anim_img_conv + 1) % 4
-        if event.type == LOGIC_UPDATE_FOR_DRILLS:
+        if event.type == LOGIC_UPDATE:
             for el in industry_tiles_group:
                 if type(el) is PneumaticDrill or type(el) is MechanicalDrill:
+                    el.logic_update()
+        if event.type == LOGIC_UPDATE_CONVEYOR:
+            for el in industry_tiles_group:
+                if type(el) is Conveyor:
                     el.logic_update()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
