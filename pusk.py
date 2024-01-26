@@ -15,6 +15,7 @@ def image_to_list(file_name):
 
 
 def generate_level(level):
+    global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
     resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
     for y in range(len(level)):
@@ -24,8 +25,8 @@ def generate_level(level):
                     for i in range(3):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
-                    tmp_core = Core(load_image('cores/core_1.png'), x, y)
-                    board.append(y, x, tmp_core, 3)
+                    core = Core(load_image('cores/core_1.png'), x, y)
+                    board.append(y, x, core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                 elif level[y][x] == (136, 0, 21):  # r, g, b игрока
@@ -790,7 +791,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
 
 
 class Conveyor(pygame.sprite.Sprite):
-    def __init__(self, img, ind_x, ind_y):
+    def __init__(self, img, ind_x, ind_y, direction):
         super().__init__(industry_tiles_group, all_sprites)
         self.image = img.copy()
         self.rect = self.image.get_rect()
@@ -906,7 +907,7 @@ pygame.init()
 pygame.mixer.init()
 
 # ВНИМАНИЕ МИНИМАЛЬНЫЙ РАЗМЕР ЭКРАНА 260 пикселей
-size = WIDTH, HEIGHT = 1280, 960
+size = WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Sand Mile')
 clock = pygame.time.Clock()
@@ -1087,17 +1088,17 @@ type_of_current_block_to_width = {
 }
 
 resources_coordinates = {
-    'coal': [coal_for_menu, (314, HEIGHT - 40)],
-    'copper': [cooper_for_menu, (347, HEIGHT - 40)],
-    'graphite': [grahite_for_menu, (380, HEIGHT - 40)],
-    'lead': [lead_for_menu, (413, HEIGHT - 40)],
-    'plastanium': [plastanium_for_menu, (446, HEIGHT - 40)],
-    'pyratite': [pyratite_for_menu, (479, HEIGHT - 40)],
-    'sand': [sand_for_menu, (512, HEIGHT - 40)],
-    'scrap': [scrap_for_menu, (545, HEIGHT - 40)],
-    'silicon': [silicon_for_menu, (578, HEIGHT - 40)],
-    'surge-alloy': [surge_alloy_for_menu, (611, HEIGHT - 40)],
-    'thorium': [thorium_for_menu, (644, HEIGHT - 40)]
+    'coal': [coal_for_menu, (315, HEIGHT - 120)],
+    'copper': [cooper_for_menu, (315, HEIGHT - 80)],
+    'graphite': [grahite_for_menu, (315, HEIGHT - 40)],
+    'lead': [lead_for_menu, (425, HEIGHT - 120)],
+    'plastanium': [plastanium_for_menu, (425, HEIGHT - 80)],
+    'pyratite': [pyratite_for_menu, (425, HEIGHT - 40)],
+    'sand': [sand_for_menu, (535, HEIGHT - 120)],
+    'scrap': [scrap_for_menu, (535, HEIGHT - 80)],
+    'silicon': [silicon_for_menu, (535, HEIGHT - 40)],
+    'surge-alloy': [surge_alloy_for_menu, (645, HEIGHT - 120)],
+    'thorium': [thorium_for_menu, (645, HEIGHT - 80)]
 }
 
 # пиксель под игрока
@@ -1127,11 +1128,17 @@ pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
-core.resource['sand'] += 1
+# принудительно добавляем ресурсы в меню
+# for i in range(999):
+#     for j in core.resources:
+#         core.resources[j] += 1
+
 SPAWN_ENEMY = pygame.USEREVENT + 1
+
 pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
+
 # TODO: Сделать строительство блоков логистики
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 # TODO: сделать методы can_take_resource(self); logical_update(self).
@@ -1275,9 +1282,14 @@ while True:
 
     # меню ресурсов
     screen.blit(resources_menu, (313, HEIGHT - 125))
-    for res in core.resource:
-        if core.resource[res]:
+    for res in core.resources:
+        font = pygame.font.Font(None, 32)
+        text = font.render(f"{core.resources[res]}", True, pygame.Color('white'))
+        text_rect = resources_coordinates[res][1]
+        if core.resources[res]:
             screen.blit(resources_coordinates[res][0], resources_coordinates[res][1])
+            screen.blit(text, (text_rect[0] + 42, text_rect[1] + 11))
+
     # отрисовка frame
     if right_frame_pos is not None:
         screen.blit(frame, right_frame_pos)
