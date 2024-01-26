@@ -744,7 +744,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         if self.resources[self.extraction_resource] > 0:
             cur_blocks = []
             for x, y in self.lst_neighboring_cells:
-                if board.industry_map[y][x] is not None and board.industry_map[y][x] is not str:
+                if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
                     if board.industry_map[y][x].can_take_resource():
                         cur_blocks.append(board.industry_map[y][x])
 
@@ -856,16 +856,28 @@ class Conveyor(pygame.sprite.Sprite):
                 self.resources[0] = None
         else:
             if self.direction == 'north':
-                if (board.industry_map[self.ind_y - 1][self.ind_x] is not str and
+                if (type(board.industry_map[self.ind_y - 1][self.ind_x]) is not str and
                         board.industry_map[self.ind_y - 1][self.ind_x] is not None):
                     if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource():
                         board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.resources[-1])
                         self.resources[-1] = None
             elif self.direction == 'east':
-                if (board.industry_map[self.ind_y][self.ind_x + 1] is not str and
+                if (type(board.industry_map[self.ind_y][self.ind_x + 1]) is not str and
                         board.industry_map[self.ind_y][self.ind_x + 1] is not None):
                     if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource():
                         board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.resources[-1])
+                        self.resources[-1] = None
+            elif self.direction == 'south':
+                if (type(board.industry_map[self.ind_y + 1][self.ind_x]) is not str and
+                        board.industry_map[self.ind_y + 1][self.ind_x] is not None):
+                    if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource():
+                        board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.resources[-1])
+                        self.resources[-1] = None
+            elif self.direction == 'west':
+                if (type(board.industry_map[self.ind_y][self.ind_x - 1]) is not str and
+                        board.industry_map[self.ind_y][self.ind_x - 1] is not None):
+                    if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource():
+                        board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.resources[-1])
                         self.resources[-1] = None
         self.zick_zack = not self.zick_zack
 
