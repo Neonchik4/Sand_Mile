@@ -1041,31 +1041,30 @@ class Junction(pygame.sprite.Sprite):
                 self.res_west_to_east = resource
 
     def logic_update(self):
-        # TODO
         if self.res_east_to_west is not None:
             if (board.industry_map[self.ind_y][self.ind_x - 1] is not None and
-                    board.industry_map[self.ind_y][self.ind_x - 1] is not str):
+                    type(board.industry_map[self.ind_y][self.ind_x - 1]) is not str):
                 if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource('west'):
                     board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.res_east_to_west, 'west')
                     self.res_east_to_west = None
 
         if self.res_north_to_south is not None:
             if (board.industry_map[self.ind_y + 1][self.ind_x] is not None and
-                    board.industry_map[self.ind_y + 1][self.ind_x] is not str):
+                    type(board.industry_map[self.ind_y + 1][self.ind_x]) is not str):
                 if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource('south'):
                     board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.res_north_to_south, 'south')
                     self.res_north_to_south = None
 
         if self.res_south_to_north is not None:
             if (board.industry_map[self.ind_y - 1][self.ind_x] is not None and
-                    board.industry_map[self.ind_y - 1][self.ind_x] is not str):
+                    type(board.industry_map[self.ind_y - 1][self.ind_x]) is not str):
                 if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource('north'):
                     board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.res_south_to_north, 'north')
                     self.res_south_to_north = None
 
         if self.res_west_to_east is not None:
             if (board.industry_map[self.ind_y][self.ind_x + 1] is not None and
-                    board.industry_map[self.ind_y][self.ind_x + 1] is not str):
+                    type(board.industry_map[self.ind_y][self.ind_x + 1]) is not str):
                 if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource('east'):
                     board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.res_west_to_east, 'east')
                     self.res_west_to_east = None
