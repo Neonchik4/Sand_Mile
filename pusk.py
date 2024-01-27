@@ -1525,9 +1525,8 @@ while True:
         font = pygame.font.Font(None, 32)
         text = font.render(f"{core.resources[res]}", True, pygame.Color('white'))
         text_rect = resources_coordinates[res][1]
-        if core.resources[res]:
-            screen.blit(resources_coordinates[res][0], resources_coordinates[res][1])
-            screen.blit(text, (text_rect[0] + 42, text_rect[1] + 11))
+        screen.blit(resources_coordinates[res][0], resources_coordinates[res][1])
+        screen.blit(text, (text_rect[0] + 42, text_rect[1] + 11))
 
     # отрисовка frame
     if right_frame_pos is not None:
