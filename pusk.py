@@ -718,6 +718,8 @@ class MechanicalDrill(pygame.sprite.Sprite):
         while self.extraction_resource is None:
             self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
         self.resources = {self.extraction_resource: 0}
+        self.ind_x = ind_x
+        self.ind_y = ind_y
 
         # эта штука под соседние клетки куда будем скидывать ресурсы
         self.lst_neighboring_cells = [(ind_x, ind_y - 1), (ind_x + 1, ind_y - 1), (ind_x - 1, ind_y),
@@ -745,6 +747,16 @@ class MechanicalDrill(pygame.sprite.Sprite):
             for x, y in self.lst_neighboring_cells:
                 if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
                     if board.industry_map[y][x].can_take_resource():
+                        if type(board.industry_map[y][x]) is Conveyor:
+                            if y < self.ind_y and board.industry_map[y][x].direction == 'south':
+                                continue
+                            if y > self.ind_y + 1 and board.industry_map[y][x].direction == 'north':
+                                continue
+                            if x < self.ind_x and board.industry_map[y][x].direction == 'east':
+                                continue
+                            if x > self.ind_x + 1 and board.industry_map[y][x].direction == 'west':
+                                continue
+
                         cur_blocks.append(board.industry_map[y][x])
 
             if cur_blocks:
@@ -1190,7 +1202,7 @@ pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
 LOGIC_UPDATE = pygame.USEREVENT + 3
 pygame.time.set_timer(LOGIC_UPDATE, 1000)
 LOGIC_UPDATE_CONVEYOR = pygame.USEREVENT + 4
-pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 200)
+pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 125)
 # TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
 # TODO: сделать методы can_take_resource(self); logical_update(self).
 
