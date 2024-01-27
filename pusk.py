@@ -381,6 +381,12 @@ class DoubleTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
+
 
 class ScatterTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -419,6 +425,12 @@ class ScatterTurret(pygame.sprite.Sprite):
 
     def update(self):
         self.rotate_towards_units()
+
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
 
 
 class HailTurret(pygame.sprite.Sprite):
@@ -459,6 +471,12 @@ class HailTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
+
 
 class SwarmerTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -497,6 +515,12 @@ class SwarmerTurret(pygame.sprite.Sprite):
 
     def update(self):
         self.rotate_towards_units()
+
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
@@ -686,7 +710,7 @@ class Core(pygame.sprite.Sprite):
     def can_take_resource(self, direction=''):
         return True
 
-    def take_resource(self, resource, direction=''):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         if resource is not None:
             self.resources[resource] += 1
 
@@ -883,19 +907,6 @@ class Conveyor(pygame.sprite.Sprite):
 
         for i in range(len(self.resources)):
             template_img_resource = None
-            # self.resources = {
-            #             'coal': 0,
-            #             'copper': 0,
-            #             'graphite': 0,
-            #             'lead': 0,
-            #             'plastanium': 0,
-            #             'pyratite': 0,
-            #             'sand': 0,
-            #             'scrap': 0,
-            #             'silicon': 0,
-            #             'surge-alloy': 0,
-            #             'thorium': 0
-            #         }
             if self.resources[i] == 'copper':
                 template_img_resource = copper.copy()
             elif self.resources[i] == 'coal':
@@ -988,7 +999,7 @@ class Conveyor(pygame.sprite.Sprite):
 
         self.zick_zack = not self.zick_zack
 
-    def take_resource(self, resource, direction=''):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         if resource is not None:
             self.resources[0] = resource
 
@@ -1029,7 +1040,7 @@ class Junction(pygame.sprite.Sprite):
 
         return True
 
-    def take_resource(self, resource, direction=''):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         if resource is not None:
             if direction == 'north':
                 self.res_south_to_north = resource
@@ -1085,10 +1096,10 @@ class Router(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self):
+    def can_take_resource(self, direction=''):
         return False
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         pass
 
 
@@ -1107,10 +1118,10 @@ class Distributor(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self):
+    def can_take_resource(self, direction=''):
         return False
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         pass
 
 
