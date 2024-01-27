@@ -883,12 +883,41 @@ class Conveyor(pygame.sprite.Sprite):
 
         for i in range(len(self.resources)):
             template_img_resource = None
+            # self.resources = {
+            #             'coal': 0,
+            #             'copper': 0,
+            #             'graphite': 0,
+            #             'lead': 0,
+            #             'plastanium': 0,
+            #             'pyratite': 0,
+            #             'sand': 0,
+            #             'scrap': 0,
+            #             'silicon': 0,
+            #             'surge-alloy': 0,
+            #             'thorium': 0
+            #         }
             if self.resources[i] == 'copper':
                 template_img_resource = copper.copy()
             elif self.resources[i] == 'coal':
                 template_img_resource = coal.copy()
             elif self.resources[i] == 'lead':
                 template_img_resource = lead.copy()
+            elif self.resources[i] == 'sand':
+                template_img_resource = sand.copy()
+            elif self.resources[i] == 'graphite':
+                template_img_resource = graphite.copy()
+            elif self.resources[i] == 'thorium':
+                template_img_resource = thorium.copy()
+            elif self.resources[i] == 'surge-alloy':
+                template_img_resource = surge_alloy.copy()
+            elif self.resources[i] == 'plastanium':
+                template_img_resource = plastanium.copy()
+            elif self.resources[i] == 'pyratite':
+                template_img_resource = pyratite.copy()
+            elif self.resources[i] == 'scrap':
+                template_img_resource = scrap.copy()
+            elif self.resources[i] == 'silicon':
+                template_img_resource = silicon.copy()
 
             res_x, res_y = i * 9, 5
             if i == 0:
@@ -1012,7 +1041,7 @@ class Junction(pygame.sprite.Sprite):
                 self.res_west_to_east = resource
 
     def logic_update(self):
-        print([self.res_east_to_west, self.res_west_to_east, self.res_south_to_north, self.res_north_to_south])
+        # TODO
         if self.res_east_to_west is not None:
             if (board.industry_map[self.ind_y][self.ind_x - 1] is not None and
                     board.industry_map[self.ind_y][self.ind_x - 1] is not str):
