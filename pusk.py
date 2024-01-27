@@ -1040,7 +1040,6 @@ class Junction(pygame.sprite.Sprite):
                 if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource():
                     board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.res_west_to_east)
                     self.res_west_to_east = None
-        print([self.res_east_to_west, self.res_west_to_east, self.res_south_to_north, self.res_north_to_south])
 
 
 class Router(pygame.sprite.Sprite):
