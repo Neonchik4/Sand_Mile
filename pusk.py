@@ -721,6 +721,9 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.ind_x = ind_x
         self.ind_y = ind_y
 
+        # считаем кол-во ресурсов под буром
+        self.speed_of_mining = self.speed_of_mining * (self.width * 2 - [tmp_1, tmp_2, tmp_3, tmp_4].count(None)) / 4
+
         # эта штука под соседние клетки куда будем скидывать ресурсы
         self.lst_neighboring_cells = [(ind_x, ind_y - 1), (ind_x + 1, ind_y - 1), (ind_x - 1, ind_y),
                                       (ind_x + 2, ind_y), (ind_x - 1, ind_y + 1), (ind_x + 2, ind_y + 1),
@@ -761,7 +764,9 @@ class MechanicalDrill(pygame.sprite.Sprite):
 
             if cur_blocks:
                 block = random.choice(cur_blocks)
-                block.take_resource(self.extraction_resource)
+                if self.resources[self.extraction_resource] >= 1:
+                    block.take_resource(self.extraction_resource)
+                    self.resources[self.extraction_resource] -= 1
 
     def update(self):
         self.update_draw()
@@ -782,7 +787,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_pneumatic_drill.copy()
         self.delta_rotating = 5.0
         self.width = 2  # отвечает за ширину блока в клетках
-        self.speed_of_mining = 1.2
+        self.speed_of_mining = 1.4
         try:
             tmp_1 = board.resource_map[ind_y][ind_x]
             tmp_2 = board.resource_map[ind_y][ind_x + 1]
@@ -794,6 +799,16 @@ class PneumaticDrill(pygame.sprite.Sprite):
         while self.extraction_resource is None:
             self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
         self.resources = {self.extraction_resource: 0}
+        self.ind_x = ind_x
+        self.ind_y = ind_y
+
+        # считаем кол-во ресурсов под буром
+        self.speed_of_mining = self.speed_of_mining * (self.width * 2 - [tmp_1, tmp_2, tmp_3, tmp_4].count(None)) / 4
+
+        # эта штука под соседние клетки куда будем скидывать ресурсы
+        self.lst_neighboring_cells = [(ind_x, ind_y - 1), (ind_x + 1, ind_y - 1), (ind_x - 1, ind_y),
+                                      (ind_x + 2, ind_y), (ind_x - 1, ind_y + 1), (ind_x + 2, ind_y + 1),
+                                      (ind_x, ind_y + 2), (ind_x + 1, ind_y + 2)]
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -803,13 +818,36 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
 
+    def can_take_resource(self):
+        return False
+
     def logic_update(self):
         self.resources[self.extraction_resource] += self.speed_of_mining
         if self.resources[self.extraction_resource] > 20:
             self.resources[self.extraction_resource] = 20
 
-    def can_take_resource(self):
-        return False
+        if self.resources[self.extraction_resource] > 0:
+            cur_blocks = []
+            for x, y in self.lst_neighboring_cells:
+                if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
+                    if board.industry_map[y][x].can_take_resource():
+                        if type(board.industry_map[y][x]) is Conveyor:
+                            if y < self.ind_y and board.industry_map[y][x].direction == 'south':
+                                continue
+                            if y > self.ind_y + 1 and board.industry_map[y][x].direction == 'north':
+                                continue
+                            if x < self.ind_x and board.industry_map[y][x].direction == 'east':
+                                continue
+                            if x > self.ind_x + 1 and board.industry_map[y][x].direction == 'west':
+                                continue
+
+                        cur_blocks.append(board.industry_map[y][x])
+
+            if cur_blocks:
+                block = random.choice(cur_blocks)
+                if self.resources[self.extraction_resource] >= 1:
+                    block.take_resource(self.extraction_resource)
+                    self.resources[self.extraction_resource] -= 1
 
     def update(self):
         self.update_draw()
