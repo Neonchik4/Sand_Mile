@@ -1045,29 +1045,29 @@ class Junction(pygame.sprite.Sprite):
         if self.res_east_to_west is not None:
             if (board.industry_map[self.ind_y][self.ind_x - 1] is not None and
                     board.industry_map[self.ind_y][self.ind_x - 1] is not str):
-                if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource():
-                    board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.res_east_to_west)
+                if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource('west'):
+                    board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.res_east_to_west, 'west')
                     self.res_east_to_west = None
 
         if self.res_north_to_south is not None:
             if (board.industry_map[self.ind_y + 1][self.ind_x] is not None and
                     board.industry_map[self.ind_y + 1][self.ind_x] is not str):
-                if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource():
-                    board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.res_north_to_south)
+                if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource('south'):
+                    board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.res_north_to_south, 'south')
                     self.res_north_to_south = None
 
         if self.res_south_to_north is not None:
             if (board.industry_map[self.ind_y - 1][self.ind_x] is not None and
                     board.industry_map[self.ind_y - 1][self.ind_x] is not str):
-                if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource():
-                    board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.res_south_to_north)
+                if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource('north'):
+                    board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.res_south_to_north, 'north')
                     self.res_south_to_north = None
 
         if self.res_west_to_east is not None:
             if (board.industry_map[self.ind_y][self.ind_x + 1] is not None and
                     board.industry_map[self.ind_y][self.ind_x + 1] is not str):
-                if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource():
-                    board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.res_west_to_east)
+                if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource('east'):
+                    board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.res_west_to_east, 'east')
                     self.res_west_to_east = None
 
 
@@ -1325,11 +1325,9 @@ pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 50)
 LOGIC_UPDATE = pygame.USEREVENT + 3
 pygame.time.set_timer(LOGIC_UPDATE, 1000)
 LOGIC_UPDATE_CONVEYOR = pygame.USEREVENT + 4
-pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 75)
+pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 100)
 LOGIC_UPDATE_JUNCTION = pygame.USEREVENT + 5
 pygame.time.set_timer(LOGIC_UPDATE_JUNCTION, 75)
-# TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
-# TODO: сделать методы can_take_resource(self); logical_update(self).
 
 while True:
     screen.fill((0, 0, 0))
