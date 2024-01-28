@@ -358,6 +358,7 @@ class DoubleTurret(pygame.sprite.Sprite):
         self.rect.y += dy
         self.damage = 20
         self.width = 1  # отвечает за ширину блока в клетках
+        self.direction = None
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -382,7 +383,7 @@ class DoubleTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def take_resource(self, resource, direction=''):
@@ -403,6 +404,7 @@ class ScatterTurret(pygame.sprite.Sprite):
         self.rect.y += dy
         self.damage = 20
         self.width = 2  # отвечает за ширину блока в клетках
+        self.direction = None
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -427,7 +429,7 @@ class ScatterTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def take_resource(self, resource, direction=''):
@@ -448,6 +450,7 @@ class HailTurret(pygame.sprite.Sprite):
         self.rect.y += dy
         self.damage = 20
         self.width = 1  # отвечает за ширину блока в клетках
+        self.direction = None
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -472,7 +475,7 @@ class HailTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def take_resource(self, resource, direction=''):
@@ -493,6 +496,7 @@ class SwarmerTurret(pygame.sprite.Sprite):
         self.rect.y += dy
         self.damage = 20
         self.width = 2  # отвечает за ширину блока в клетках
+        self.direction = None
 
     def attack(self, obj):
         obj.decrease_health(self.damage)
@@ -517,7 +521,7 @@ class SwarmerTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def take_resource(self, resource, direction=''):
@@ -690,6 +694,7 @@ class Core(pygame.sprite.Sprite):
             'thorium': 0
         }
         self.width = 3  # отвечает за ширину блока в клетках
+        self.direction = None
 
     def kill_myself(self):
         self.kill()
@@ -708,7 +713,7 @@ class Core(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return True
 
     def take_resource(self, resource, direction=''):
@@ -745,6 +750,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.resources = {self.extraction_resource: 0}
         self.ind_x = ind_x
         self.ind_y = ind_y
+        self.direction = None
 
         # считаем кол-во ресурсов под буром
         self.speed_of_mining = self.speed_of_mining * (self.width * 2 - [tmp_1, tmp_2, tmp_3, tmp_4].count(None)) / 4
@@ -762,7 +768,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def logic_update(self):
@@ -774,7 +780,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
             cur_blocks = []
             for x, y in self.lst_neighboring_cells:
                 if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
-                    if board.industry_map[y][x].can_take_resource(''):
+                    if board.industry_map[y][x].can_take_resource('', ''):
                         if type(board.industry_map[y][x]) is Conveyor:
                             if y < self.ind_y and board.industry_map[y][x].direction == 'south':
                                 continue
@@ -826,6 +832,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.resources = {self.extraction_resource: 0}
         self.ind_x = ind_x
         self.ind_y = ind_y
+        self.direction = None
 
         # считаем кол-во ресурсов под буром
         self.speed_of_mining = self.speed_of_mining * (self.width * 2 - [tmp_1, tmp_2, tmp_3, tmp_4].count(None)) / 4
@@ -843,7 +850,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def logic_update(self):
@@ -855,7 +862,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
             cur_blocks = []
             for x, y in self.lst_neighboring_cells:
                 if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
-                    if board.industry_map[y][x].can_take_resource(''):
+                    if board.industry_map[y][x].can_take_resource('', ''):
                         if type(board.industry_map[y][x]) is Conveyor:
                             if y < self.ind_y and board.industry_map[y][x].direction == 'south':
                                 continue
@@ -962,8 +969,16 @@ class Conveyor(pygame.sprite.Sprite):
     def update(self):
         self.update_draw()
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         if self.resources[0] is not None:
+            return False
+        if direction == 'east' and self.direction == 'west':
+            return False
+        if direction == 'north' and self.direction == 'south':
+            return False
+        if direction == 'south' and self.direction == 'north':
+            return False
+        if direction == 'west' and self.direction == 'east':
             return False
         return True
 
@@ -976,25 +991,25 @@ class Conveyor(pygame.sprite.Sprite):
             if self.direction == 'north':
                 if (type(board.industry_map[self.ind_y - 1][self.ind_x]) is not str and
                         board.industry_map[self.ind_y - 1][self.ind_x] is not None):
-                    if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource(self.direction):
+                    if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource('', self.direction):
                         board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.resources[-1], self.direction)
                         self.resources[-1] = None
             if self.direction == 'east':
                 if (type(board.industry_map[self.ind_y][self.ind_x + 1]) is not str and
                         board.industry_map[self.ind_y][self.ind_x + 1] is not None):
-                    if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource(self.direction):
+                    if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource('', self.direction):
                         board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.resources[-1], self.direction)
                         self.resources[-1] = None
             if self.direction == 'south':
                 if (type(board.industry_map[self.ind_y + 1][self.ind_x]) is not str and
                         board.industry_map[self.ind_y + 1][self.ind_x] is not None):
-                    if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource(self.direction):
+                    if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource('', self.direction):
                         board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.resources[-1], self.direction)
                         self.resources[-1] = None
             if self.direction == 'west':
                 if (type(board.industry_map[self.ind_y][self.ind_x - 1]) is not str and
                         board.industry_map[self.ind_y][self.ind_x - 1] is not None):
-                    if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource(self.direction):
+                    if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource('', self.direction):
                         board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.resources[-1], self.direction)
                         self.resources[-1] = None
 
@@ -1019,6 +1034,8 @@ class Junction(pygame.sprite.Sprite):
         self.ind_x = ind_x
         self.ind_y = ind_y
 
+        # нет направления
+        self.direction = None
         self.res_north_to_south = None
         self.res_south_to_north = None
         self.res_west_to_east = None
@@ -1027,7 +1044,7 @@ class Junction(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         if direction == '':
             return False
         elif direction == 'north' and self.res_south_to_north is not None:
@@ -1056,28 +1073,28 @@ class Junction(pygame.sprite.Sprite):
         if self.res_east_to_west is not None:
             if (board.industry_map[self.ind_y][self.ind_x - 1] is not None and
                     type(board.industry_map[self.ind_y][self.ind_x - 1]) is not str):
-                if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource('west'):
+                if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource('', 'west'):
                     board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.res_east_to_west, 'west')
                     self.res_east_to_west = None
 
         if self.res_north_to_south is not None:
             if (board.industry_map[self.ind_y + 1][self.ind_x] is not None and
                     type(board.industry_map[self.ind_y + 1][self.ind_x]) is not str):
-                if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource('south'):
+                if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource('', 'south'):
                     board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.res_north_to_south, 'south')
                     self.res_north_to_south = None
 
         if self.res_south_to_north is not None:
             if (board.industry_map[self.ind_y - 1][self.ind_x] is not None and
                     type(board.industry_map[self.ind_y - 1][self.ind_x]) is not str):
-                if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource('north'):
+                if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource('', 'north'):
                     board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.res_south_to_north, 'north')
                     self.res_south_to_north = None
 
         if self.res_west_to_east is not None:
             if (board.industry_map[self.ind_y][self.ind_x + 1] is not None and
                     type(board.industry_map[self.ind_y][self.ind_x + 1]) is not str):
-                if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource('east'):
+                if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource('', 'east'):
                     board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.res_west_to_east, 'east')
                     self.res_west_to_east = None
 
@@ -1094,14 +1111,81 @@ class Router(pygame.sprite.Sprite):
         self.rect.y += dy
         self.width = 1
 
+        self.resources = [None]
+        self.direction = None
+        # направления куда маршрутизатор будет выводить
+        # пока что с погрешностью
+        self.directions = []
+        self.ind_x = ind_x
+        self.ind_y = ind_y
+        self.update_directions()
+        self.current_direction = 0
+
+    def update_directions(self):
+        """Добавляет в список directions направления куда будет выводить ресурсы.
+        Проверка на can_take_resource обязательна."""
+        if board.industry_map[self.ind_y - 1][self.ind_x] is not None and type(
+                board.industry_map[self.ind_y - 1][self.ind_x]) is not str:
+            if board.industry_map[self.ind_y - 1][self.ind_x].direction != 'south':
+                if 'north' not in self.directions:
+                    self.directions.append('north')
+        if board.industry_map[self.ind_y + 1][self.ind_x] is not None and type(
+                board.industry_map[self.ind_y + 1][self.ind_x]) is not str:
+            if board.industry_map[self.ind_y + 1][self.ind_x].direction != 'north':
+                if 'south' not in self.directions:
+                    self.directions.append('south')
+        if board.industry_map[self.ind_y][self.ind_x - 1] is not None and type(
+                board.industry_map[self.ind_y][self.ind_x - 1]) is not str:
+            if board.industry_map[self.ind_y][self.ind_x - 1].direction != 'east':
+                if 'west' not in self.directions:
+                    self.directions.append('west')
+        if board.industry_map[self.ind_y][self.ind_x + 1] is not None and type(
+                board.industry_map[self.ind_y][self.ind_x + 1]) is not str:
+            if board.industry_map[self.ind_y][self.ind_x + 1].direction != 'west':
+                if 'east' not in self.directions:
+                    self.directions.append('east')
+
     def update(self):
         pass
 
-    def can_take_resource(self, direction=''):
-        return False
+    def logic_update(self):
+        self.update_directions()
+        if len(self.directions) > 0:
+            self.current_direction = (self.current_direction + 1) % len(self.directions)
+
+            if self.directions[self.current_direction] == 'east':
+                if board.industry_map[self.ind_y][self.ind_x + 1] is not None and type(
+                        board.industry_map[self.ind_y][self.ind_x + 1]) is not str:
+                    if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource(self.resources[0], 'east'):
+                        board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.resources[0], 'east')
+                        self.resources[0] = None
+            if self.directions[self.current_direction] == 'north':
+                if board.industry_map[self.ind_y - 1][self.ind_x] is not None and type(
+                        board.industry_map[self.ind_y - 1][self.ind_x]) is not str:
+                    if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource(self.resources[0], 'north'):
+                        board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.resources[0], 'north')
+                        self.resources[0] = None
+            if self.directions[self.current_direction] == 'south':
+                if board.industry_map[self.ind_y + 1][self.ind_x] is not None and type(
+                        board.industry_map[self.ind_y + 1][self.ind_x]) is not str:
+                    if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource(self.resources[0], 'south'):
+                        board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.resources[0], 'south')
+                        self.resources[0] = None
+            if self.directions[self.current_direction] == 'west':
+                if board.industry_map[self.ind_y][self.ind_x - 1] is not None and type(
+                        board.industry_map[self.ind_y][self.ind_x - 1]) is not str:
+                    if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource(self.resources[0], 'west'):
+                        board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.resources[0], 'west')
+                        self.resources[0] = None
+
+    def can_take_resource(self, resource='', direction=''):
+        if self.resources[0] is not None:
+            return False
+        return True
 
     def take_resource(self, resource, direction=''):
-        pass
+        if resource is not None:
+            self.resources[0] = resource
 
 
 class Distributor(pygame.sprite.Sprite):
@@ -1119,7 +1203,7 @@ class Distributor(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self, direction=''):
+    def can_take_resource(self, resource='', direction=''):
         return False
 
     def take_resource(self, resource, direction=''):
@@ -1372,6 +1456,8 @@ LOGIC_UPDATE_CONVEYOR = pygame.USEREVENT + 4
 pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 100)
 LOGIC_UPDATE_JUNCTION = pygame.USEREVENT + 5
 pygame.time.set_timer(LOGIC_UPDATE_JUNCTION, 75)
+LOGIC_UPDATE_ROUTER = pygame.USEREVENT + 6
+pygame.time.set_timer(LOGIC_UPDATE_ROUTER, 100)
 
 while True:
     screen.fill((0, 0, 0))
@@ -1398,6 +1484,10 @@ while True:
         if event.type == LOGIC_UPDATE_JUNCTION:
             for el in industry_tiles_group:
                 if type(el) is Junction:
+                    el.logic_update()
+        if event.type == LOGIC_UPDATE_ROUTER:
+            for el in industry_tiles_group:
+                if type(el) is Router:
                     el.logic_update()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
