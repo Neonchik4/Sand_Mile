@@ -15,6 +15,7 @@ def image_to_list(file_name):
 
 
 def generate_level(level):
+    global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
     resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
     for y in range(len(level)):
@@ -24,8 +25,8 @@ def generate_level(level):
                     for i in range(3):
                         for j in range(3):
                             Tile(player_pixel, x + i, y + j)
-                    tmp_core = Core(load_image('cores/core_1.png'), x, y)
-                    board.append(y, x, tmp_core, 3)
+                    core = Core(load_image('cores/core_1.png'), x, y)
+                    board.append(y, x, core, 3)
                 elif level[y][x] in tiles_images:
                     Tile(level[y][x], x, y)
                     if level[y][x] in tile_wall:
@@ -37,8 +38,12 @@ def generate_level(level):
                     Tile(player_pixel, x, y)
             else:
                 Tile((0, 0, 0), x, y)
+                board.industry_map[0][0] = 'blocked'
+
             if level[y][x] == (210, 174, 141) or level[y][x] == (60, 56, 56):
                 board.resource_map[y][x] = 'sand'
+            if level[y][x] in blocked_blocks:
+                board.industry_map[y][x] = 'blocked'
 
     for j in range(len(resource_map)):
         for i in range(len(resource_map[j])):
@@ -129,6 +134,67 @@ def start_screen():
         clock.tick(FPS)
 
 
+def end_screen():
+    pygame.init()
+    size = WIDTH, HEIGHT = 1280, 960
+    screen = pygame.display.set_mode(size)
+    screen.fill((125, 125, 125))
+    cursor = pygame.image.load('data/cursor.png')
+    # Не трогать пустую строку - это отступ от заставки
+    res = core.resources
+    intro_text = [
+        "",
+        "Ваши ресурсы:"
+    ]
+    for k, v in res.items():
+        intro_text.append(f"{k} - {v}")
+    fon = pygame.transform.scale(load_image('logo.png'), (674, 107))
+    screen.blit(fon, (WIDTH // 2 - 337, 0))
+    font = pygame.font.Font(None, 32)
+    text_coord = 140
+    text = font.render("Поздравляю с концом игры, надеюсь вам понравилось!", True, pygame.Color('black'))
+    text_rect = text.get_rect(center=(WIDTH / 2, text_coord))
+    screen.blit(text, text_rect)
+    font = pygame.font.Font(None, 28)
+    text_coord += 10
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    x, y = screen.get_size()
+    width = 300
+    height = 75
+    btn_new_game = Button(
+        color=(244, 169, 0),
+        x=x // 2 - (width // 2),
+        y=int(y * 0.75 - (height // 2)),
+        width=width,
+        height=height,
+        text="Выход"
+    )
+    btn_new_game.draw(screen)
+    END_GAME = pygame.USEREVENT + 2
+    pygame.mouse.set_visible(True)
+    # BUG: С кнопкой экран пояляется на 1 секунду и закрвыется
+    while True:
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                terminate()
+            # elif event.type == END_GAME:
+                # return
+
+        if btn_new_game.box.collidepoint(pygame.mouse.get_pos()):
+            pygame.event.post(pygame.event.Event(END_GAME))
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
@@ -155,10 +221,6 @@ class Player(pygame.sprite.Sprite):
         self.is_in_motion = False
         self.health = 100
         self.rect = self.image.get_rect().move(self.x, self.y)
-        # print(self.x, self.y)
-        # print()
-        # print(self.rect[0], self.rect[1])
-        # в комментариях лежит магический фокус
         self.orig = self.image
 
     def rotate_towards_mouse(self):
@@ -192,10 +254,10 @@ def get_pos_core():
 
 def spawn_enemy():
     y, x = get_pos_spawn_mark()
-    # units = [Dagger, Crawler, Nova]
-    units = [Dagger]
-    for _ in range(11):
-        y_t, x_t = random.randint(y, y + 6), random.randint(x, x + 6)
+    units = [Dagger, Crawler, Nova]
+    # units = [Dagger]
+    for _ in range(21):
+        y_t, x_t = random.randint(y, y + 6), random.randint(x- 10, x + 6)
         random.choice(units)(x_t, y_t)
 
 
@@ -213,11 +275,18 @@ class Dagger(pygame.sprite.Sprite):
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+        self.flag = True
+        self.flag_check = False
+        self.fn_left = None
+        self.fn_right = None
+        self.fn_top = None
+        self.fn_bottom = None
+        self.core = None
 
     def update(self):
         core_x, core_y = get_pos_core()
-        core = board.industry_map[core_x][core_y]
-        self.move_to_base(core)
+        self.core = board.industry_map[core_x][core_y]
+        self.move_to_base()
         # self.rotate(core_x, core_y)
 
     def rotate(self, core_x, core_y):
@@ -226,28 +295,32 @@ class Dagger(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
         self.rect = self.image.get_rect(center=self.rect.center)
 
-    def move_to_base(self, core):
-        dx, dy = (core.rect.x + core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
-                  core.rect.y + core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+    def move_to_base(self):
+        dx, dy = (self.core.rect.x + self.core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  self.core.rect.y + self.core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
         dist = (math.hypot(dx, dy))
-        # print(dist)
         if dist < 150:
             return
         if dist != 0:
             dx, dy = dx / dist, dy / dist
-        if t := pygame.sprite.spritecollideany(self, invisible_group):
-            col_x = t.rect.x
-            col_y = t.rect.y
-            if col_x >= self.rect.x:
-                self.rect.x -= col_x - self.rect.x
-            if col_x <= self.rect.x:
-                self.rect.x += self.rect.x - col_x
-            # TODO: Рассмотреть когда равны координаты x
-            # Может быть использовать лучи для проверки в какую сторону надо пойти
-            if col_x == self.rect.x:
-                self.rect.x += -32
-            # self.rect.x += self.rect.x + 0.5 * self.t
-            # self.t *= -1
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            if self.flag:
+                self.flag = not self.flag
+                self.fn_left = InvsibleFinder(self.rect.x, self.rect.y, -1000)
+                self.fn_right = InvsibleFinder(self.rect.x, self.rect.y, 1000)
+            if pygame.sprite.spritecollideany(self.fn_left, invisible_group):
+                if self.fn_left.check_positon() and self.fn_left.check_positon():
+                    if self.fn_left.rect.x > self.fn_right.rect.x:
+                        dx, dy = (abs(self.rect.x - self.fn_left.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_left.rect.y) - self.rect.y)
+                    else:
+                        dx, dy = (abs(self.rect.x - self.fn_right.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_right.rect.y) - self.rect.y)
+                    dist = (math.hypot(dx, dy))
+                    if dist != 0:
+                        dx, dy = dx / dist, dy / dist
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
         else:
             self.rect.x += dx * self.speed
             self.rect.y += dy * self.speed
@@ -273,6 +346,13 @@ class Crawler(pygame.sprite.Sprite):
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+        self.flag = True
+        self.flag_check = False
+        self.fn_left = None
+        self.fn_right = None
+        self.fn_top = None
+        self.fn_bottom = None
+        self.core = None
 
     def update(self):
         if t := pygame.sprite.spritecollideany(self, invisible_group):
@@ -285,8 +365,8 @@ class Crawler(pygame.sprite.Sprite):
             # self.rect.x += self.rect.x + 0.5 * self.t
             # self.t *= -1
         core_x, core_y = get_pos_core()
-        core = board.industry_map[core_x][core_y]
-        self.move_to_base(core)
+        self.core = board.industry_map[core_x][core_y]
+        self.move_to_base()
         # self.rotate(core_x, core_y)
 
     def rotate(self, core_x, core_y):
@@ -295,16 +375,35 @@ class Crawler(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
         self.rect = self.image.get_rect(center=self.rect.center)
 
-    def move_to_base(self, core):
-        dx, dy = (core.rect.x + core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
-                  core.rect.y + core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+    def move_to_base(self):
+        dx, dy = (self.core.rect.x + self.core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  self.core.rect.y + self.core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
         dist = (math.hypot(dx, dy))
-        if dist < 200:
+        if dist < 150:
             return
         if dist != 0:
             dx, dy = dx / dist, dy / dist
-        self.rect.x += dx * self.speed
-        self.rect.y += dy * self.speed
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            if self.flag:
+                self.flag = not self.flag
+                self.fn_left = InvsibleFinder(self.rect.x, self.rect.y, -1000)
+                self.fn_right = InvsibleFinder(self.rect.x, self.rect.y, 1000)
+            if pygame.sprite.spritecollideany(self.fn_left, invisible_group):
+                if self.fn_left.check_positon() and self.fn_left.check_positon():
+                    if self.fn_left.rect.x > self.fn_right.rect.x:
+                        dx, dy = (abs(self.rect.x - self.fn_left.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_left.rect.y) - self.rect.y)
+                    else:
+                        dx, dy = (abs(self.rect.x - self.fn_right.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_right.rect.y) - self.rect.y)
+                    dist = (math.hypot(dx, dy))
+                    if dist != 0:
+                        dx, dy = dx / dist, dy / dist
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
+        else:
+            self.rect.x += dx * self.speed
+            self.rect.y += dy * self.speed
 
     def attack(self, target):
         ...
@@ -322,6 +421,12 @@ class Nova(pygame.sprite.Sprite):
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+        self.flag = True
+        self.flag_check = False
+        self.fn_left = None
+        self.fn_right = None
+        self.fn_top = None
+        self.fn_bottom = None
 
     def update(self):
         if t := pygame.sprite.spritecollideany(self, invisible_group):
@@ -334,8 +439,8 @@ class Nova(pygame.sprite.Sprite):
             # self.rect.x += self.rect.x + 0.5 * self.t
             # self.t *= -1
         core_x, core_y = get_pos_core()
-        core = board.industry_map[core_x][core_y]
-        self.move_to_base(core)
+        self.core = board.industry_map[core_x][core_y]
+        self.move_to_base()
         # self.rotate(core_x, core_y)
 
     def rotate(self, core_x, core_y):
@@ -344,16 +449,35 @@ class Nova(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
         self.rect = self.image.get_rect(center=self.rect.center)
 
-    def move_to_base(self, core):
-        dx, dy = (core.rect.x + core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
-                  core.rect.y + core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+    def move_to_base(self):
+        dx, dy = (self.core.rect.x + self.core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  self.core.rect.y + self.core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
         dist = (math.hypot(dx, dy))
-        if dist < 250:
+        if dist < 150:
             return
         if dist != 0:
             dx, dy = dx / dist, dy / dist
-        self.rect.x += dx * self.speed
-        self.rect.y += dy * self.speed
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            if self.flag:
+                self.flag = not self.flag
+                self.fn_left = InvsibleFinder(self.rect.x, self.rect.y, -1000)
+                self.fn_right = InvsibleFinder(self.rect.x, self.rect.y, 1000)
+            if pygame.sprite.spritecollideany(self.fn_left, invisible_group):
+                if self.fn_left.check_positon() and self.fn_left.check_positon():
+                    if self.fn_left.rect.x > self.fn_right.rect.x:
+                        dx, dy = (abs(self.rect.x - self.fn_left.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_left.rect.y) - self.rect.y)
+                    else:
+                        dx, dy = (abs(self.rect.x - self.fn_right.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_right.rect.y) - self.rect.y)
+                    dist = (math.hypot(dx, dy))
+                    if dist != 0:
+                        dx, dy = dx / dist, dy / dist
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
+        else:
+            self.rect.x += dx * self.speed
+            self.rect.y += dy * self.speed
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -372,6 +496,37 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         '''
+
+
+class InvsibleFinder(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y, x):
+        super().__init__(invisible_finder, all_sprites)
+        self.image = pygame.transform.scale(load_image("bullet_invisible.png"), (25, 25))
+        self.orig = self.image
+        self.speed = 10
+        self.rect = self.image.get_rect()
+        self.rect.x = ind_x
+        self.rect.y = ind_y
+        self.delta_x = x
+
+    def update(self):
+        self.move_to(self.rect.x + self.delta_x, self.rect.y)
+
+    def check_positon(self):
+        if self.speed == 0:
+            return True
+        return False
+
+    def move_to(self, x, y):
+        dx, dy = (x - self.rect.x,
+                  y - self.rect.y)
+        dist = (math.hypot(dx, dy))
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+        self.rect.x += dx * self.speed
+        self.rect.y += dy * self.speed
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            self.speed = 0
 
 
 class Button:
@@ -520,6 +675,12 @@ class DoubleTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
+
 
 class ScatterTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -558,6 +719,12 @@ class ScatterTurret(pygame.sprite.Sprite):
 
     def update(self):
         self.rotate_towards_units()
+
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
 
 
 class HailTurret(pygame.sprite.Sprite):
@@ -598,6 +765,12 @@ class HailTurret(pygame.sprite.Sprite):
     def update(self):
         self.rotate_towards_units()
 
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
+
 
 class SwarmerTurret(pygame.sprite.Sprite):
     def __init__(self, img, ind_x, ind_y):
@@ -636,6 +809,12 @@ class SwarmerTurret(pygame.sprite.Sprite):
 
     def update(self):
         self.rotate_towards_units()
+
+    def can_take_resource(self, direction=''):
+        return False
+
+    def take_resource(self, resource, direction=''):
+        pass
 
 
 def frame_positions(pos1, pos2, pos3, *pos_mouse):
@@ -749,7 +928,7 @@ def frame_positions(pos1, pos2, pos3, *pos_mouse):
         else:
             pos3 = None
 
-        if 106 <= mouse_x <= 156:
+        if 106 <= mouse_x <= 156 and type_of_current_block == 'conveyor':
             if arrow_direction == 'east':
                 arrow_direction = 'north'
             elif arrow_direction == 'north':
@@ -822,11 +1001,12 @@ class Core(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self):
+    def can_take_resource(self, direction=''):
         return True
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
-        self.resources[resource] += 1
+    def take_resource(self, resource, direction=''):
+        if resource is not None:
+            self.resources[resource] += 1
 
 
 class MechanicalDrill(pygame.sprite.Sprite):
@@ -844,7 +1024,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_mechanical_drill.copy()
         self.delta_rotating = 5.0
         self.width = 2  # отвечает за ширину блока в клетках
-        self.speed_of_mining = 0.06
+        self.speed_of_mining = 0.8
         try:
             tmp_1 = board.resource_map[ind_y][ind_x]
             tmp_2 = board.resource_map[ind_y][ind_x + 1]
@@ -856,6 +1036,16 @@ class MechanicalDrill(pygame.sprite.Sprite):
         while self.extraction_resource is None:
             self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
         self.resources = {self.extraction_resource: 0}
+        self.ind_x = ind_x
+        self.ind_y = ind_y
+
+        # считаем кол-во ресурсов под буром
+        self.speed_of_mining = self.speed_of_mining * (self.width * 2 - [tmp_1, tmp_2, tmp_3, tmp_4].count(None)) / 4
+
+        # эта штука под соседние клетки куда будем скидывать ресурсы
+        self.lst_neighboring_cells = [(ind_x, ind_y - 1), (ind_x + 1, ind_y - 1), (ind_x - 1, ind_y),
+                                      (ind_x + 2, ind_y), (ind_x - 1, ind_y + 1), (ind_x + 2, ind_y + 1),
+                                      (ind_x, ind_y + 2), (ind_x + 1, ind_y + 2)]
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -865,7 +1055,7 @@ class MechanicalDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_mechanical_drill, (0, 0))
 
-    def can_take_resource(self):
+    def can_take_resource(self, direction=''):
         return False
 
     def logic_update(self):
@@ -873,9 +1063,31 @@ class MechanicalDrill(pygame.sprite.Sprite):
         if self.resources[self.extraction_resource] > 20:
             self.resources[self.extraction_resource] = 20
 
+        if self.resources[self.extraction_resource] > 0:
+            cur_blocks = []
+            for x, y in self.lst_neighboring_cells:
+                if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
+                    if board.industry_map[y][x].can_take_resource(''):
+                        if type(board.industry_map[y][x]) is Conveyor:
+                            if y < self.ind_y and board.industry_map[y][x].direction == 'south':
+                                continue
+                            if y > self.ind_y + 1 and board.industry_map[y][x].direction == 'north':
+                                continue
+                            if x < self.ind_x and board.industry_map[y][x].direction == 'east':
+                                continue
+                            if x > self.ind_x + 1 and board.industry_map[y][x].direction == 'west':
+                                continue
+
+                        cur_blocks.append(board.industry_map[y][x])
+
+            if cur_blocks:
+                block = random.choice(cur_blocks)
+                if self.resources[self.extraction_resource] >= 1:
+                    block.take_resource(self.extraction_resource)
+                    self.resources[self.extraction_resource] -= 1
+
     def update(self):
         self.update_draw()
-        print(self.__repr__(), self.resources)
 
 
 class PneumaticDrill(pygame.sprite.Sprite):
@@ -893,7 +1105,7 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.orig_rotate_img = rotator_pneumatic_drill.copy()
         self.delta_rotating = 5.0
         self.width = 2  # отвечает за ширину блока в клетках
-        self.speed_of_mining = 0.08
+        self.speed_of_mining = 1.4
         try:
             tmp_1 = board.resource_map[ind_y][ind_x]
             tmp_2 = board.resource_map[ind_y][ind_x + 1]
@@ -905,6 +1117,16 @@ class PneumaticDrill(pygame.sprite.Sprite):
         while self.extraction_resource is None:
             self.extraction_resource = random.choice([tmp_1, tmp_2, tmp_3, tmp_4])
         self.resources = {self.extraction_resource: 0}
+        self.ind_x = ind_x
+        self.ind_y = ind_y
+
+        # считаем кол-во ресурсов под буром
+        self.speed_of_mining = self.speed_of_mining * (self.width * 2 - [tmp_1, tmp_2, tmp_3, tmp_4].count(None)) / 4
+
+        # эта штука под соседние клетки куда будем скидывать ресурсы
+        self.lst_neighboring_cells = [(ind_x, ind_y - 1), (ind_x + 1, ind_y - 1), (ind_x - 1, ind_y),
+                                      (ind_x + 2, ind_y), (ind_x - 1, ind_y + 1), (ind_x + 2, ind_y + 1),
+                                      (ind_x, ind_y + 2), (ind_x + 1, ind_y + 2)]
 
     def update_draw(self):
         self.angle += self.delta_rotating
@@ -914,13 +1136,36 @@ class PneumaticDrill(pygame.sprite.Sprite):
         self.image.blit(rotated_img, rotated_img_rect.topleft)
         self.image.blit(stub_pneumatic_drill, (0, 0))
 
+    def can_take_resource(self, direction=''):
+        return False
+
     def logic_update(self):
         self.resources[self.extraction_resource] += self.speed_of_mining
         if self.resources[self.extraction_resource] > 20:
             self.resources[self.extraction_resource] = 20
 
-    def can_take_resource(self):
-        return False
+        if self.resources[self.extraction_resource] > 0:
+            cur_blocks = []
+            for x, y in self.lst_neighboring_cells:
+                if board.industry_map[y][x] is not None and type(board.industry_map[y][x]) is not str:
+                    if board.industry_map[y][x].can_take_resource(''):
+                        if type(board.industry_map[y][x]) is Conveyor:
+                            if y < self.ind_y and board.industry_map[y][x].direction == 'south':
+                                continue
+                            if y > self.ind_y + 1 and board.industry_map[y][x].direction == 'north':
+                                continue
+                            if x < self.ind_x and board.industry_map[y][x].direction == 'east':
+                                continue
+                            if x > self.ind_x + 1 and board.industry_map[y][x].direction == 'west':
+                                continue
+
+                        cur_blocks.append(board.industry_map[y][x])
+
+            if cur_blocks:
+                block = random.choice(cur_blocks)
+                if self.resources[self.extraction_resource] >= 1:
+                    block.take_resource(self.extraction_resource)
+                    self.resources[self.extraction_resource] -= 1
 
     def update(self):
         self.update_draw()
@@ -939,39 +1184,119 @@ class Conveyor(pygame.sprite.Sprite):
         self.rect.y += dy
         self.width = 1
         self.anim_images = [conveyor_0, conveyor_1, conveyor_2, conveyor_3]
-        self.resources = [None, None, None]
+        self.resources = [None, None]
         # направление - north, south, west and east
         self.direction = direction
         self.ind_x = ind_x
         self.ind_y = ind_y
+        self.zick_zack = False
 
     def update_draw(self):
-        self.image = self.anim_images[current_anim_img_conv]
+        self.image = self.anim_images[current_anim_img_conv].copy()
         if self.direction == 'north':
             self.image = pygame.transform.rotate(self.image.copy(), 90)
         elif self.direction == 'west':
             self.image = pygame.transform.rotate(self.image.copy(), 180)
         elif self.direction == 'south':
             self.image = pygame.transform.rotate(self.image.copy(), 270)
-        # TODO: доделать эту хреновину
-        # for i in rande(len(self.resources)):
-        #     if el == 'copper':
-        #         self.image.blit(copper, (i * 9, 0))
-        #     elif el == 'coal':
-        #         self.image.blit(copper, (i * 9, 0))
+
+        for i in range(len(self.resources)):
+            template_img_resource = None
+            if self.resources[i] == 'copper':
+                template_img_resource = copper.copy()
+            elif self.resources[i] == 'coal':
+                template_img_resource = coal.copy()
+            elif self.resources[i] == 'lead':
+                template_img_resource = lead.copy()
+            elif self.resources[i] == 'sand':
+                template_img_resource = sand.copy()
+            elif self.resources[i] == 'graphite':
+                template_img_resource = graphite.copy()
+            elif self.resources[i] == 'thorium':
+                template_img_resource = thorium.copy()
+            elif self.resources[i] == 'surge-alloy':
+                template_img_resource = surge_alloy.copy()
+            elif self.resources[i] == 'plastanium':
+                template_img_resource = plastanium.copy()
+            elif self.resources[i] == 'pyratite':
+                template_img_resource = pyratite.copy()
+            elif self.resources[i] == 'scrap':
+                template_img_resource = scrap.copy()
+            elif self.resources[i] == 'silicon':
+                template_img_resource = silicon.copy()
+
+            res_x, res_y = i * 9, 5
+            if i == 0:
+                res_x -= 2
+            elif i == 1:
+                res_x += 2
+
+            if self.direction == 'north':
+                res_x, res_y = 5, 0
+                if i == 0:
+                    res_y = 11
+                elif i == 1:
+                    res_y = -2
+            elif self.direction == 'west':
+                res_x, res_y = 0, 5
+                if i == 0:
+                    res_x = 11
+                elif i == 1:
+                    res_x = -2
+            elif self.direction == 'south':
+                res_x, res_y = 5, 0
+                if i == 0:
+                    res_y = -2
+                elif i == 1:
+                    res_y = 11
+
+            if template_img_resource is not None:
+                self.image.blit(template_img_resource, (res_x, res_y))
 
     def update(self):
-        # logic update
         self.update_draw()
 
-    def can_take_resource(self):
-        if self.resources[-1] is not None:
+    def can_take_resource(self, direction=''):
+        if self.resources[0] is not None:
             return False
         return True
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def logic_update(self):
+        if self.zick_zack:
+            if self.resources[1] is None:
+                self.resources[1] = self.resources[0]
+                self.resources[0] = None
+        else:
+            if self.direction == 'north':
+                if (type(board.industry_map[self.ind_y - 1][self.ind_x]) is not str and
+                        board.industry_map[self.ind_y - 1][self.ind_x] is not None):
+                    if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource(self.direction):
+                        board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.resources[-1], self.direction)
+                        self.resources[-1] = None
+            if self.direction == 'east':
+                if (type(board.industry_map[self.ind_y][self.ind_x + 1]) is not str and
+                        board.industry_map[self.ind_y][self.ind_x + 1] is not None):
+                    if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource(self.direction):
+                        board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.resources[-1], self.direction)
+                        self.resources[-1] = None
+            if self.direction == 'south':
+                if (type(board.industry_map[self.ind_y + 1][self.ind_x]) is not str and
+                        board.industry_map[self.ind_y + 1][self.ind_x] is not None):
+                    if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource(self.direction):
+                        board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.resources[-1], self.direction)
+                        self.resources[-1] = None
+            if self.direction == 'west':
+                if (type(board.industry_map[self.ind_y][self.ind_x - 1]) is not str and
+                        board.industry_map[self.ind_y][self.ind_x - 1] is not None):
+                    if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource(self.direction):
+                        board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.resources[-1], self.direction)
+                        self.resources[-1] = None
+
+        self.zick_zack = not self.zick_zack
+
+    def take_resource(self, resource, direction=''):
         if resource is not None:
-            self.resources[-1] = resource
+            self.resources[0] = resource
 
 
 class Junction(pygame.sprite.Sprite):
@@ -985,15 +1310,70 @@ class Junction(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.width = 1
+        self.ind_x = ind_x
+        self.ind_y = ind_y
+
+        self.res_north_to_south = None
+        self.res_south_to_north = None
+        self.res_west_to_east = None
+        self.res_east_to_west = None
 
     def update(self):
         pass
 
-    def can_take_resource(self):
-        return False
+    def can_take_resource(self, direction=''):
+        if direction == '':
+            return False
+        elif direction == 'north' and self.res_south_to_north is not None:
+            return False
+        elif direction == 'south' and self.res_north_to_south is not None:
+            return False
+        elif direction == 'east' and self.res_west_to_east is not None:
+            return False
+        elif direction == 'west' and self.res_east_to_west is not None:
+            return False
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
-        pass
+        return True
+
+    def take_resource(self, resource, direction=''):
+        if resource is not None:
+            if direction == 'north':
+                self.res_south_to_north = resource
+            elif direction == 'south':
+                self.res_north_to_south = resource
+            elif direction == 'west':
+                self.res_east_to_west = resource
+            elif direction == 'east':
+                self.res_west_to_east = resource
+
+    def logic_update(self):
+        if self.res_east_to_west is not None:
+            if (board.industry_map[self.ind_y][self.ind_x - 1] is not None and
+                    type(board.industry_map[self.ind_y][self.ind_x - 1]) is not str):
+                if board.industry_map[self.ind_y][self.ind_x - 1].can_take_resource('west'):
+                    board.industry_map[self.ind_y][self.ind_x - 1].take_resource(self.res_east_to_west, 'west')
+                    self.res_east_to_west = None
+
+        if self.res_north_to_south is not None:
+            if (board.industry_map[self.ind_y + 1][self.ind_x] is not None and
+                    type(board.industry_map[self.ind_y + 1][self.ind_x]) is not str):
+                if board.industry_map[self.ind_y + 1][self.ind_x].can_take_resource('south'):
+                    board.industry_map[self.ind_y + 1][self.ind_x].take_resource(self.res_north_to_south, 'south')
+                    self.res_north_to_south = None
+
+        if self.res_south_to_north is not None:
+            if (board.industry_map[self.ind_y - 1][self.ind_x] is not None and
+                    type(board.industry_map[self.ind_y - 1][self.ind_x]) is not str):
+                if board.industry_map[self.ind_y - 1][self.ind_x].can_take_resource('north'):
+                    board.industry_map[self.ind_y - 1][self.ind_x].take_resource(self.res_south_to_north, 'north')
+                    self.res_south_to_north = None
+
+        if self.res_west_to_east is not None:
+            if (board.industry_map[self.ind_y][self.ind_x + 1] is not None and
+                    type(board.industry_map[self.ind_y][self.ind_x + 1]) is not str):
+                if board.industry_map[self.ind_y][self.ind_x + 1].can_take_resource('east'):
+                    board.industry_map[self.ind_y][self.ind_x + 1].take_resource(self.res_west_to_east, 'east')
+                    self.res_west_to_east = None
 
 
 class Router(pygame.sprite.Sprite):
@@ -1011,10 +1391,10 @@ class Router(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self):
+    def can_take_resource(self, direction=''):
         return False
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         pass
 
 
@@ -1033,10 +1413,10 @@ class Distributor(pygame.sprite.Sprite):
     def update(self):
         pass
 
-    def can_take_resource(self):
+    def can_take_resource(self, direction=''):
         return False
 
-    def take_resource(self, resource):  # СООБЩАТЬ ИСКЛЮЧИТЕЛЬНО СТРОКУ - ТИП РЕСУРСА!
+    def take_resource(self, resource, direction=''):
         pass
 
 
@@ -1059,11 +1439,12 @@ industry_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
-# Ни в коем случаи не отрисовывать!!!
 invisible_group = pygame.sprite.Group()
+invisible_finder = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
+resources_menu = pygame.image.load('data/menu/resource_panel.png')
 frame = pygame.image.load('data/menu/frame.png')
 red_frame = pygame.image.load('data/menu/red-frame-33-33.png')
 frame_33 = pygame.image.load('data/menu/frame-33-33.png')
@@ -1100,17 +1481,29 @@ router = pygame.image.load('data/logistics_blocks/router.png')
 sorter = pygame.image.load('data/logistics_blocks/sorter.png')
 underflow_gate = pygame.image.load('data/logistics_blocks/underflow_gate.png')
 
-coal = pygame.image.load('data/resources/coal.png')
-copper = pygame.image.load('data/resources/copper.png')
-graphite = pygame.image.load('data/resources/graphite.png')
-lead = pygame.image.load('data/resources/lead.png')
-plastanium = pygame.image.load('data/resources/plastanium.png')
-pyratite = pygame.image.load('data/resources/pyratite.png')
-sand = pygame.image.load('data/resources/sand.png')
-scrap = pygame.image.load('data/resources/scrap.png')
-silicon = pygame.image.load('data/resources/silicon.png')
-surge_alloy = pygame.image.load('data/resources/surge-alloy.png')
-thorium = pygame.image.load('data/resources/thorium.png')
+coal = pygame.transform.scale(pygame.image.load('data/resources/coal.png'), (22, 22))
+copper = pygame.transform.scale(pygame.image.load('data/resources/copper.png'), (22, 22))
+graphite = pygame.transform.scale(pygame.image.load('data/resources/graphite.png'), (22, 22))
+lead = pygame.transform.scale(pygame.image.load('data/resources/lead.png'), (22, 22))
+plastanium = pygame.transform.scale(pygame.image.load('data/resources/plastanium.png'), (22, 22))
+pyratite = pygame.transform.scale(pygame.image.load('data/resources/pyratite.png'), (22, 22))
+sand = pygame.transform.scale(pygame.image.load('data/resources/sand.png'), (22, 22))
+scrap = pygame.transform.scale(pygame.image.load('data/resources/scrap.png'), (22, 22))
+silicon = pygame.transform.scale(pygame.image.load('data/resources/silicon.png'), (22, 22))
+surge_alloy = pygame.transform.scale(pygame.image.load('data/resources/surge-alloy.png'), (22, 22))
+thorium = pygame.transform.scale(pygame.image.load('data/resources/thorium.png'), (22, 22))
+
+coal_for_menu = pygame.image.load('data/resources/coal.png')
+cooper_for_menu = pygame.image.load('data/resources/copper.png')
+grahite_for_menu = pygame.image.load('data/resources/graphite.png')
+lead_for_menu = pygame.image.load('data/resources/lead.png')
+plastanium_for_menu = pygame.image.load('data/resources/plastanium.png')
+pyratite_for_menu = pygame.image.load('data/resources/pyratite.png')
+sand_for_menu = pygame.image.load('data/resources/sand.png')
+scrap_for_menu = pygame.image.load('data/resources/scrap.png')
+silicon_for_menu = pygame.image.load('data/resources/silicon.png')
+surge_alloy_for_menu = pygame.image.load('data/resources/surge-alloy.png')
+thorium_for_menu = pygame.image.load('data/resources/thorium.png')
 
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
@@ -1182,6 +1575,11 @@ tile_wall = [
     (146, 94, 70),
 ]
 
+# r, g, b
+blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66),
+                  (218, 181, 96),
+                  (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
+
 # если не знаем какой это пиксель, берём случайный из этих
 default_pixels = [(127, 127, 127), (120, 120, 120), (60, 56, 56)]
 # словарь цветов для руд
@@ -1231,6 +1629,20 @@ type_of_current_block_to_width = {
     'swarmer turret': 2
 }
 
+resources_coordinates = {
+    'coal': [coal_for_menu, (315, HEIGHT - 120)],
+    'copper': [cooper_for_menu, (315, HEIGHT - 80)],
+    'graphite': [grahite_for_menu, (315, HEIGHT - 40)],
+    'lead': [lead_for_menu, (425, HEIGHT - 120)],
+    'plastanium': [plastanium_for_menu, (425, HEIGHT - 80)],
+    'pyratite': [pyratite_for_menu, (425, HEIGHT - 40)],
+    'sand': [sand_for_menu, (535, HEIGHT - 120)],
+    'scrap': [scrap_for_menu, (535, HEIGHT - 80)],
+    'silicon': [silicon_for_menu, (535, HEIGHT - 40)],
+    'surge-alloy': [surge_alloy_for_menu, (645, HEIGHT - 120)],
+    'thorium': [thorium_for_menu, (645, HEIGHT - 80)]
+}
+
 # пиксель под игрока
 player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
 # Для работы с картами
@@ -1242,6 +1654,7 @@ dj = DJ()
 board = Board()
 camera = Camera()
 cursor_frame = CursorFrame()
+core = None
 
 # ВАЖНО: PLAYER всегда должен находиться над пикселем ядра(пометка для создания карт)
 # (136, 0, 21): player
@@ -1257,14 +1670,24 @@ pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
 
+# принудительно добавляем ресурсы в меню
+# for i in range(999):
+#     for j in core.resources:
+#         core.resources[j] += 1
+
 SPAWN_ENEMY = pygame.USEREVENT + 1
 flag = True
-pygame.time.set_timer(SPAWN_ENEMY, 100)
+pygame.time.set_timer(SPAWN_ENEMY, 1000000000)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
-pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 75)
-# TODO: Сделать строительство блоков логистики
-# TODO: Сделать методы получения ресурсов и логистического обновления каждого блока
-# TODO: сделать методы can_take_resource(self); logical_update(self).
+pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 50)
+LOGIC_UPDATE = pygame.USEREVENT + 3
+pygame.time.set_timer(LOGIC_UPDATE, 1000)
+LOGIC_UPDATE_CONVEYOR = pygame.USEREVENT + 4
+pygame.time.set_timer(LOGIC_UPDATE_CONVEYOR, 100)
+LOGIC_UPDATE_JUNCTION = pygame.USEREVENT + 5
+pygame.time.set_timer(LOGIC_UPDATE_JUNCTION, 75)
+flag_exit = False
+
 while True:
     screen.fill((0, 0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -1273,14 +1696,31 @@ while True:
     # индексы мышки относительно карты
     index_mouse_x = math.floor((template_player_x + mouse_x - WIDTH / 2) / 32)
     index_mouse_y = math.floor((template_player_y + mouse_y - HEIGHT / 2) / 32)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
         if event.type == SPAWN_ENEMY and flag:
             flag = False
             spawn_enemy()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            flag_exit = True
+            break
         if event.type == CHANGE_CONVEYOR_ANIM:
             current_anim_img_conv = (current_anim_img_conv + 1) % 4
+        if event.type == LOGIC_UPDATE:
+            for el in industry_tiles_group:
+                if type(el) is PneumaticDrill or type(el) is MechanicalDrill:
+                    el.logic_update()
+        if event.type == LOGIC_UPDATE_CONVEYOR:
+            for el in industry_tiles_group:
+                if type(el) is Conveyor:
+                    el.logic_update()
+        if event.type == LOGIC_UPDATE_JUNCTION:
+            for el in industry_tiles_group:
+                if type(el) is Junction:
+                    el.logic_update()
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
             right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = frame_positions(right_frame_pos,
                                                                                          top_left_frame_pos,
@@ -1339,7 +1779,8 @@ while True:
                 if board.industry_map[index_mouse_y][index_mouse_x] is not None:
                     board.industry_map[index_mouse_y][index_mouse_x].kill()
                     board.destroy(index_mouse_y, index_mouse_x, board.industry_map[index_mouse_y][index_mouse_x])
-
+    if flag_exit:
+        break
     # перемещение персонажа
     player.is_in_motion = False
     keys = pygame.key.get_pressed()
@@ -1381,6 +1822,8 @@ while True:
     player_group.draw(screen)
     player.rotate_towards_mouse()
     # invisible_group.draw(screen)
+    invisible_finder.update()
+    # invisible_finder.draw(screen)
 
     # логистика
     for el in industry_tiles_group:
@@ -1406,6 +1849,15 @@ while True:
     elif blocks_type == 'turrets':
         screen.blit(turrets_image, (4, HEIGHT - 250))
 
+    # меню ресурсов
+    screen.blit(resources_menu, (313, HEIGHT - 125))
+    for res in core.resources:
+        font = pygame.font.Font(None, 32)
+        text = font.render(f"{core.resources[res]}", True, pygame.Color('white'))
+        text_rect = resources_coordinates[res][1]
+        screen.blit(resources_coordinates[res][0], resources_coordinates[res][1])
+        screen.blit(text, (text_rect[0] + 42, text_rect[1] + 11))
+
     # отрисовка frame
     if right_frame_pos is not None:
         screen.blit(frame, right_frame_pos)
@@ -1424,3 +1876,6 @@ while True:
 
     pygame.display.flip()
     clock.tick(FPS)
+
+if flag_exit:
+    end_screen()
