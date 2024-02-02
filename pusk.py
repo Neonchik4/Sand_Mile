@@ -17,7 +17,9 @@ def image_to_list(file_name):
 def generate_level(level):
     global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
-    resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
+    resource_map = image_to_list(
+        ['data/maps/resource_maps/resource_map_1.png', 'data/maps/resource_maps/resource_map_1.png'][
+            index_of_selected_map])
     for y in range(len(level)):
         for x in range(len(level[y])):
             if x != 0 and y != 0:
@@ -1414,10 +1416,11 @@ resources_coordinates = {
     'thorium': [thorium_for_menu, (645, HEIGHT - 80)]
 }
 
+index_of_selected_map = random.choice([0])
 # пиксель под игрока
-player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
+player_pixel = image_to_list(['data/maps/sand_map_2.png', 'data/maps/snow_map_1.png'][index_of_selected_map])[0][0]
 # Для работы с картами
-map_name = 'data/maps/snow_map_1.png'
+map_name = ['data/maps/sand_map_2.png', 'data/maps/snow_map_1.png'][index_of_selected_map]
 lst_map = image_to_list(map_name)
 
 dj = DJ()
@@ -1440,11 +1443,6 @@ index_player_x, index_player_y = template_player_x // 32, template_player_y // 3
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
-
-# принудительно добавляем ресурсы в меню
-# for i in range(999):
-#     for j in core.resources:
-#         core.resources[j] += 1
 
 SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 100)
