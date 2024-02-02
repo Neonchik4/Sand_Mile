@@ -255,7 +255,6 @@ def get_pos_core():
 def spawn_enemy():
     y, x = get_pos_spawn_mark()
     units = [Dagger, Crawler, Nova]
-    # units = [Dagger]
     for _ in range(21):
         y_t, x_t = random.randint(y, y + 6), random.randint(x- 10, x + 6)
         random.choice(units)(x_t, y_t)
@@ -282,17 +281,21 @@ class Dagger(pygame.sprite.Sprite):
         self.fn_top = None
         self.fn_bottom = None
         self.core = None
+        self.template_x = self.rect.x
+        self.template_y = self.rect.y
 
     def update(self):
         core_x, core_y = get_pos_core()
         self.core = board.industry_map[core_x][core_y]
         self.move_to_base()
-        # self.rotate(core_x, core_y)
+        self.rotate(core_x, core_y)
 
     def rotate(self, core_x, core_y):
+        core_x *= tile_width
+        core_y *= tile_height
         rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def move_to_base(self):
@@ -320,10 +323,14 @@ class Dagger(pygame.sprite.Sprite):
                     if dist != 0:
                         dx, dy = dx / dist, dy / dist
                     self.rect.x += dx * self.speed
+                    self.template_x += dx * self.speed
                     self.rect.y += dy * self.speed
+                    self.template_y += dy * self.speed
         else:
             self.rect.x += dx * self.speed
+            self.template_x += dx * self.speed
             self.rect.y += dy * self.speed
+            self.template_y += dy * self.speed
 
     def attack(self, target):
         ...
@@ -367,12 +374,12 @@ class Crawler(pygame.sprite.Sprite):
         core_x, core_y = get_pos_core()
         self.core = board.industry_map[core_x][core_y]
         self.move_to_base()
-        # self.rotate(core_x, core_y)
+        self.rotate(core_x, core_y)
 
     def rotate(self, core_x, core_y):
         rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def move_to_base(self):
@@ -441,12 +448,12 @@ class Nova(pygame.sprite.Sprite):
         core_x, core_y = get_pos_core()
         self.core = board.industry_map[core_x][core_y]
         self.move_to_base()
-        # self.rotate(core_x, core_y)
+        self.rotate(core_x, core_y)
 
     def rotate(self, core_x, core_y):
         rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.orig, int(angle) - 90)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def move_to_base(self):
@@ -1169,7 +1176,6 @@ class PneumaticDrill(pygame.sprite.Sprite):
 
     def update(self):
         self.update_draw()
-        print(self.__repr__(), self.resources)
 
 
 class Conveyor(pygame.sprite.Sprite):
@@ -1677,7 +1683,7 @@ start_screen()
 
 SPAWN_ENEMY = pygame.USEREVENT + 1
 flag = True
-pygame.time.set_timer(SPAWN_ENEMY, 1000000000)
+pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 50)
 LOGIC_UPDATE = pygame.USEREVENT + 3
@@ -1821,9 +1827,10 @@ while True:
     enemy_group.draw(screen)
     player_group.draw(screen)
     player.rotate_towards_mouse()
-    # invisible_group.draw(screen)
     invisible_finder.update()
-    # invisible_finder.draw(screen)
+
+    if flag_exit:
+        break
 
     # логистика
     for el in industry_tiles_group:
