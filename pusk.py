@@ -319,7 +319,7 @@ class DJ:
 
         # саундтреки
         if self.index_of_sound is not None:
-            soundtrack.play(self.soundtracks[self.index_of_sound], loops=1)
+            soundtrack.play(self.soundtracks[self.index_of_sound])
             soundtrack.set_volume(0.75)
             self.index_of_sound = None
 
@@ -1151,7 +1151,7 @@ class Router(pygame.sprite.Sprite):
     def logic_update(self):
         self.update_directions()
         if len(self.directions) > 0:
-            self.current_direction = (self.current_direction + 1) % len(self.directions)
+            self.current_direction = random.randint(0, len(self.directions) - 1)
 
             if self.directions[self.current_direction] == 'east':
                 if board.industry_map[self.ind_y][self.ind_x + 1] is not None and type(
@@ -1590,7 +1590,7 @@ while True:
     player.rotate_towards_mouse()
 
     # саундтрек
-    tmp = random.randrange(0, 5000)
+    tmp = random.randrange(0, 75000)
     if tmp == 1 and not soundtrack.get_busy():
         dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
     dj.update()
