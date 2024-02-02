@@ -18,7 +18,7 @@ def generate_level(level):
     global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
     resource_map = image_to_list(
-        ['data/maps/resource_maps/resource_map_1.png', 'data/maps/resource_maps/resource_map_1.png'][
+        ['data/maps/resource_maps/resource_map_1.png', 'data/maps/resource_maps/resource_map_2.png'][
             index_of_selected_map])
     for y in range(len(level)):
         for x in range(len(level[y])):
@@ -693,7 +693,8 @@ class Core(pygame.sprite.Sprite):
             'scrap': 0,
             'silicon': 0,
             'surge-alloy': 0,
-            'thorium': 0
+            'thorium': 0,
+            "titanium": 0
         }
         self.width = 3  # отвечает за ширину блока в клетках
         self.direction = None
@@ -1293,6 +1294,7 @@ scrap_for_menu = pygame.image.load('data/resources/scrap.png')
 silicon_for_menu = pygame.image.load('data/resources/silicon.png')
 surge_alloy_for_menu = pygame.image.load('data/resources/surge-alloy.png')
 thorium_for_menu = pygame.image.load('data/resources/thorium.png')
+titanium_for_menu = pygame.image.load('data/resources/titanium.png')
 
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
@@ -1413,14 +1415,16 @@ resources_coordinates = {
     'scrap': [scrap_for_menu, (535, HEIGHT - 80)],
     'silicon': [silicon_for_menu, (535, HEIGHT - 40)],
     'surge-alloy': [surge_alloy_for_menu, (645, HEIGHT - 120)],
-    'thorium': [thorium_for_menu, (645, HEIGHT - 80)]
+    'thorium': [thorium_for_menu, (645, HEIGHT - 80)],
+    'titanium': [titanium_for_menu, (645, HEIGHT - 40)]
 }
 
-index_of_selected_map = random.choice([0])
+# TODO
+index_of_selected_map = random.choice([1])
 # пиксель под игрока
-player_pixel = image_to_list(['data/maps/sand_map_2.png', 'data/maps/snow_map_1.png'][index_of_selected_map])[0][0]
+player_pixel = image_to_list(['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map])[0][0]
 # Для работы с картами
-map_name = ['data/maps/sand_map_2.png', 'data/maps/snow_map_1.png'][index_of_selected_map]
+map_name = ['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map]
 lst_map = image_to_list(map_name)
 
 dj = DJ()
