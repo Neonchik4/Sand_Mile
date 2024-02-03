@@ -1425,7 +1425,6 @@ resources_coordinates = {
 
 # TODO
 index_of_selected_map = random.choice([0, 1])
-print(index_of_selected_map)
 # пиксель под игрока
 player_pixel = image_to_list(['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map])[0][0]
 # Для работы с картами
