@@ -1423,7 +1423,6 @@ resources_coordinates = {
     'titanium': [titanium_for_menu, (645, HEIGHT - 40)]
 }
 
-# TODO
 index_of_selected_map = random.choice([0, 1])
 # пиксель под игрока
 player_pixel = image_to_list(['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map])[0][0]
