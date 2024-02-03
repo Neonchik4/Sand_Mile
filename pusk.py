@@ -264,6 +264,7 @@ class Dagger(pygame.sprite.Sprite):
     def __init__(self, ind_x, ind_y):
         super().__init__(enemy_group, all_sprites)
         self.speed = 10
+        self.damage = 10
         self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
         self.orig = self.image
         self.rect = self.image.get_rect()
@@ -274,6 +275,7 @@ class Dagger(pygame.sprite.Sprite):
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+        self.range()
         self.flag = True
         self.flag_check = False
         self.fn_left = None
@@ -283,16 +285,17 @@ class Dagger(pygame.sprite.Sprite):
         self.core = None
         self.template_x = self.rect.x
         self.template_y = self.rect.y
+        self.target = None
 
     def update(self):
         core_x, core_y = get_pos_core()
         self.core = board.industry_map[core_x][core_y]
         self.move_to_base()
         self.rotate(core_x, core_y)
+        self.range()
+        # Range(self, 100).draw_range()
 
     def rotate(self, core_x, core_y):
-        core_x *= tile_width
-        core_y *= tile_height
         rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
         self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
@@ -332,8 +335,17 @@ class Dagger(pygame.sprite.Sprite):
             self.rect.y += dy * self.speed
             self.template_y += dy * self.speed
 
-    def attack(self, target):
-        ...
+    # BUG: Нужно убрать видимость круга
+    # Пока сделанно он увидел строение, он остновился и как-бы начал атаковать
+    def range(self):
+        color = (100, 100, 100, 255)
+        t = pygame.draw.circle(screen, color, (self.rect.center), 100, 1)
+        for i in industry_tiles_group:
+            if pygame.Rect.colliderect(i.rect, t):
+                # i.hp -= self.damage
+                self.speed = 0
+                # if i.hp == 0:
+                    # self.speed = 10
 
     def shoot(self):
         bullet = Bullet(self.rect.x, self.rect.y)
@@ -415,6 +427,16 @@ class Crawler(pygame.sprite.Sprite):
     def attack(self, target):
         ...
 
+    def range(self):
+        color = (100, 100, 100, 255)
+        t = pygame.draw.circle(screen, color, (self.rect.center), 100, 1)
+        for i in industry_tiles_group:
+            if pygame.Rect.colliderect(i.rect, t):
+                # i.hp -= self.damage
+                self.speed = 0
+                # if i.hp == 0:
+                    # self.speed = 10
+
 
 class Nova(pygame.sprite.Sprite):
     def __init__(self, ind_x, ind_y):
@@ -486,9 +508,19 @@ class Nova(pygame.sprite.Sprite):
             self.rect.x += dx * self.speed
             self.rect.y += dy * self.speed
 
+    def range(self):
+        color = (100, 100, 100, 255)
+        t = pygame.draw.circle(screen, color, (self.rect.center), 100, 1)
+        for i in industry_tiles_group:
+            if pygame.Rect.colliderect(i.rect, t):
+                # i.hp -= self.damage
+                self.speed = 0
+                # if i.hp == 0:
+                    # self.speed = 10
+
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, ind_x, ind_y):
+    def __init__(self, ind_x, ind_y, target):
         super().__init__(bullet_group, all_sprites)
         self.image = load_image("bullet.png")
         self.orig = self.image
@@ -496,13 +528,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = ind_x
         self.rect.y = ind_y
-        '''
-        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
-        dx = (ind_x - index_player_x) * tile_width
-        dy = (ind_y - index_player_y) * tile_height
-        self.rect.x += dx
-        self.rect.y += dy
-        '''
+        self.target = target
 
 
 class InvsibleFinder(pygame.sprite.Sprite):
@@ -510,7 +536,7 @@ class InvsibleFinder(pygame.sprite.Sprite):
         super().__init__(invisible_finder, all_sprites)
         self.image = pygame.transform.scale(load_image("bullet_invisible.png"), (25, 25))
         self.orig = self.image
-        self.speed = 10
+        self.speed = 50
         self.rect = self.image.get_rect()
         self.rect.x = ind_x
         self.rect.y = ind_y
@@ -1447,6 +1473,7 @@ enemy_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 invisible_group = pygame.sprite.Group()
 invisible_finder = pygame.sprite.Group()
+ranges_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
@@ -1828,6 +1855,8 @@ while True:
     player_group.draw(screen)
     player.rotate_towards_mouse()
     invisible_finder.update()
+    # ranges_group.draw(screen)
+    # ranges_group.update()
 
     if flag_exit:
         break
