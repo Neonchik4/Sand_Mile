@@ -940,6 +940,8 @@ class Conveyor(pygame.sprite.Sprite):
                 template_img_resource = scrap.copy()
             elif self.resources[i] == 'silicon':
                 template_img_resource = silicon.copy()
+            elif self.resources[i] == 'titanium':
+                template_img_resource = titanium.copy()
 
             res_x, res_y = i * 9, 5
             if i == 0:
@@ -1202,6 +1204,7 @@ class Distributor(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.width = 2
+        self.direction = None
 
     def update(self):
         pass
@@ -1282,6 +1285,7 @@ scrap = pygame.transform.scale(pygame.image.load('data/resources/scrap.png'), (2
 silicon = pygame.transform.scale(pygame.image.load('data/resources/silicon.png'), (22, 22))
 surge_alloy = pygame.transform.scale(pygame.image.load('data/resources/surge-alloy.png'), (22, 22))
 thorium = pygame.transform.scale(pygame.image.load('data/resources/thorium.png'), (22, 22))
+titanium = pygame.transform.scale(pygame.image.load('data/resources/titanium.png'), (22, 22))
 
 coal_for_menu = pygame.image.load('data/resources/coal.png')
 cooper_for_menu = pygame.image.load('data/resources/copper.png')
@@ -1352,7 +1356,7 @@ tiles_images = {
 
 # r, g, b
 blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66),
-                  (218, 181, 96),
+                  (218, 181, 96), (92, 86, 122),
                   (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
 
 # если не знаем какой это пиксель, берём случайный из этих
@@ -1420,7 +1424,8 @@ resources_coordinates = {
 }
 
 # TODO
-index_of_selected_map = random.choice([1])
+index_of_selected_map = random.choice([0, 1])
+print(index_of_selected_map)
 # пиксель под игрока
 player_pixel = image_to_list(['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map])[0][0]
 # Для работы с картами
