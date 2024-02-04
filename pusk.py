@@ -17,7 +17,9 @@ def image_to_list(file_name):
 def generate_level(level):
     global core
     new_player, lvl_x, lvl_y = None, tile_width * len(level[0]), tile_height * len(level)
-    resource_map = image_to_list('data/maps/resource_maps/resource_map_1.png')
+    resource_map = image_to_list(
+        ['data/maps/resource_maps/resource_map_1.png', 'data/maps/resource_maps/resource_map_2.png'][
+            index_of_selected_map])
     for y in range(len(level)):
         for x in range(len(level[y])):
             if x != 0 and y != 0:
@@ -647,7 +649,7 @@ class DJ:
 
         # саундтреки
         if self.index_of_sound is not None:
-            soundtrack.play(self.soundtracks[self.index_of_sound], loops=1)
+            soundtrack.play(self.soundtracks[self.index_of_sound])
             soundtrack.set_volume(0.75)
             self.index_of_sound = None
 
@@ -1019,7 +1021,8 @@ class Core(pygame.sprite.Sprite):
             'scrap': 0,
             'silicon': 0,
             'surge-alloy': 0,
-            'thorium': 0
+            'thorium': 0,
+            "titanium": 0
         }
         self.width = 3  # отвечает за ширину блока в клетках
         self.direction = None
@@ -1265,6 +1268,8 @@ class Conveyor(pygame.sprite.Sprite):
                 template_img_resource = scrap.copy()
             elif self.resources[i] == 'silicon':
                 template_img_resource = silicon.copy()
+            elif self.resources[i] == 'titanium':
+                template_img_resource = titanium.copy()
 
             res_x, res_y = i * 9, 5
             if i == 0:
@@ -1479,7 +1484,7 @@ class Router(pygame.sprite.Sprite):
     def logic_update(self):
         self.update_directions()
         if len(self.directions) > 0:
-            self.current_direction = (self.current_direction + 1) % len(self.directions)
+            self.current_direction = random.randint(0, len(self.directions) - 1)
 
             if self.directions[self.current_direction] == 'east':
                 if board.industry_map[self.ind_y][self.ind_x + 1] is not None and type(
@@ -1527,6 +1532,7 @@ class Distributor(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.width = 2
+        self.direction = None
 
     def update(self):
         pass
@@ -1611,6 +1617,7 @@ scrap = pygame.transform.scale(pygame.image.load('data/resources/scrap.png'), (2
 silicon = pygame.transform.scale(pygame.image.load('data/resources/silicon.png'), (22, 22))
 surge_alloy = pygame.transform.scale(pygame.image.load('data/resources/surge-alloy.png'), (22, 22))
 thorium = pygame.transform.scale(pygame.image.load('data/resources/thorium.png'), (22, 22))
+titanium = pygame.transform.scale(pygame.image.load('data/resources/titanium.png'), (22, 22))
 
 coal_for_menu = pygame.image.load('data/resources/coal.png')
 cooper_for_menu = pygame.image.load('data/resources/copper.png')
@@ -1623,6 +1630,7 @@ scrap_for_menu = pygame.image.load('data/resources/scrap.png')
 silicon_for_menu = pygame.image.load('data/resources/silicon.png')
 surge_alloy_for_menu = pygame.image.load('data/resources/surge-alloy.png')
 thorium_for_menu = pygame.image.load('data/resources/thorium.png')
+titanium_for_menu = pygame.image.load('data/resources/titanium.png')
 
 right_frame_pos, top_left_frame_pos, bottom_left_frame_pos = None, None, None
 blocks_type = None
@@ -1680,7 +1688,7 @@ tiles_images = {
 
 # r, g, b
 blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66),
-                  (218, 181, 96),
+                  (218, 181, 96), (92, 86, 122),
                   (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
 
 tile_wall = [
@@ -1765,13 +1773,15 @@ resources_coordinates = {
     'scrap': [scrap_for_menu, (535, HEIGHT - 80)],
     'silicon': [silicon_for_menu, (535, HEIGHT - 40)],
     'surge-alloy': [surge_alloy_for_menu, (645, HEIGHT - 120)],
-    'thorium': [thorium_for_menu, (645, HEIGHT - 80)]
+    'thorium': [thorium_for_menu, (645, HEIGHT - 80)],
+    'titanium': [titanium_for_menu, (645, HEIGHT - 40)]
 }
 
+index_of_selected_map = random.choice([0, 1])
 # пиксель под игрока
-player_pixel = image_to_list('data/maps/snow_map_1.png')[0][0]
+player_pixel = image_to_list(['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map])[0][0]
 # Для работы с картами
-map_name = 'data/maps/snow_map_1.png'
+map_name = ['data/maps/snow_map_1.png', 'data/maps/sand_map_2.png'][index_of_selected_map]
 lst_map = image_to_list(map_name)
 
 dj = DJ()
@@ -1794,11 +1804,6 @@ index_player_x, index_player_y = template_player_x // 32, template_player_y // 3
 pygame.mixer.set_num_channels(10)
 soundtrack = pygame.mixer.Channel(2)
 start_screen()
-
-# принудительно добавляем ресурсы в меню
-# for i in range(999):
-#     for j in core.resources:
-#         core.resources[j] += 1
 
 SPAWN_ENEMY = pygame.USEREVENT + 1
 flag = True
@@ -1968,7 +1973,7 @@ while True:
     player.rotate_towards_mouse()
 
     # саундтрек
-    tmp = random.randrange(0, 5000)
+    tmp = random.randrange(0, 75000)
     if tmp == 1 and not soundtrack.get_busy():
         dj.index_of_sound = random.randint(0, len(dj.soundtracks) - 1)
     dj.update()
