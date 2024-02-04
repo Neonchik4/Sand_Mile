@@ -132,6 +132,67 @@ def start_screen():
         clock.tick(FPS)
 
 
+def end_screen():
+    pygame.init()
+    size = WIDTH, HEIGHT = 1280, 960
+    screen = pygame.display.set_mode(size)
+    screen.fill((125, 125, 125))
+    cursor = pygame.image.load('data/cursor.png')
+    # Не трогать пустую строку - это отступ от заставки
+    res = core.resources
+    intro_text = [
+        "",
+        "Ваши ресурсы:"
+    ]
+    for k, v in res.items():
+        intro_text.append(f"{k} - {v}")
+    fon = pygame.transform.scale(load_image('logo.png'), (674, 107))
+    screen.blit(fon, (WIDTH // 2 - 337, 0))
+    font = pygame.font.Font(None, 32)
+    text_coord = 140
+    text = font.render("Поздравляю с концом игры, надеюсь вам понравилось!", True, pygame.Color('black'))
+    text_rect = text.get_rect(center=(WIDTH / 2, text_coord))
+    screen.blit(text, text_rect)
+    font = pygame.font.Font(None, 28)
+    text_coord += 10
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    x, y = screen.get_size()
+    width = 300
+    height = 75
+    btn_new_game = Button(
+        color=(244, 169, 0),
+        x=x // 2 - (width // 2),
+        y=int(y * 0.75 - (height // 2)),
+        width=width,
+        height=height,
+        text="Выход"
+    )
+    btn_new_game.draw(screen)
+    END_GAME = pygame.USEREVENT + 2
+    pygame.mouse.set_visible(True)
+    # BUG: С кнопкой экран пояляется на 1 секунду и закрвыется
+    while True:
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                terminate()
+            # elif event.type == END_GAME:
+                # return
+
+        if btn_new_game.box.collidepoint(pygame.mouse.get_pos()):
+            pygame.event.post(pygame.event.Event(END_GAME))
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
@@ -186,61 +247,321 @@ def get_pos_core():
         for j in range(len(board.industry_map[i])):
             if board.industry_map[i][j]:
                 if isinstance(board.industry_map[i][j], Core):
-                    return board.industry_map[i][j]
+                    return i, j
 
 
 # TODO: сделать спавн в опр радиусе
 # Пока в определом месте, потом пройдемся по карте и найдем место спавна
 def spawn_enemy():
-    Dagger(*get_pos_spawn_mark())
+    y, x = get_pos_spawn_mark()
+    units = [Dagger, Crawler, Nova]
+    for _ in range(21):
+        y_t, x_t = random.randint(y, y + 6), random.randint(x- 10, x + 6)
+        random.choice(units)(x_t, y_t)
 
 
 class Dagger(pygame.sprite.Sprite):
     def __init__(self, ind_x, ind_y):
         super().__init__(enemy_group, all_sprites)
+        # self.hp = ???
+        # self.damage = ???
         self.speed = 10
+        self.damage = 10
         self.image = pygame.transform.scale(load_image("units/dagger.png"), (50, 50))
+        self.orig = self.image
+        self.rect = self.image.get_rect()
+        self.ind_x = ind_x
+        self.ind_y = ind_y
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.range()
+        self.flag = True
+        self.flag_check = False
+        self.fn_left = None
+        self.fn_right = None
+        self.fn_top = None
+        self.fn_bottom = None
+        self.core = None
+        self.template_x = self.rect.x
+        self.template_y = self.rect.y
+        self.target = None
+
+    def update(self):
+        core_x, core_y = get_pos_core()
+        self.core = board.industry_map[core_x][core_y]
+        self.move_to_base()
+        self.rotate(core_x, core_y)
+        self.range()
+        # Range(self, 100).draw_range()
+
+    def rotate(self, core_x, core_y):
+        rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def move_to_base(self):
+        dx, dy = (self.core.rect.x + self.core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  self.core.rect.y + self.core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+        dist = (math.hypot(dx, dy))
+        if dist < 150:
+            return
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            if self.flag:
+                self.flag = not self.flag
+                self.fn_left = InvsibleFinder(self.rect.x, self.rect.y, -1000)
+                self.fn_right = InvsibleFinder(self.rect.x, self.rect.y, 1000)
+            if pygame.sprite.spritecollideany(self.fn_left, invisible_group):
+                if self.fn_left.check_positon() and self.fn_left.check_positon():
+                    if self.fn_left.rect.x > self.fn_right.rect.x:
+                        dx, dy = (abs(self.rect.x - self.fn_left.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_left.rect.y) - self.rect.y)
+                    else:
+                        dx, dy = (abs(self.rect.x - self.fn_right.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_right.rect.y) - self.rect.y)
+                    dist = (math.hypot(dx, dy))
+                    if dist != 0:
+                        dx, dy = dx / dist, dy / dist
+                    self.rect.x += dx * self.speed
+                    self.template_x += dx * self.speed
+                    self.rect.y += dy * self.speed
+                    self.template_y += dy * self.speed
+        else:
+            self.rect.x += dx * self.speed
+            self.template_x += dx * self.speed
+            self.rect.y += dy * self.speed
+            self.template_y += dy * self.speed
+
+    # BUG: Нужно убрать видимость круга
+    # Пока сделанно он увидел строение, он остновился и как-бы начал атаковать
+    def range(self):
+        color = (100, 100, 100, 255)
+        t = pygame.draw.circle(screen, color, (self.rect.center), 100, 1)
+        for i in industry_tiles_group:
+            if pygame.Rect.colliderect(i.rect, t):
+                # i.hp -= self.damage
+                self.speed = 0
+                # if i.hp == 0:
+                    # self.speed = 10
+
+    def shoot(self):
+        bullet = Bullet(self.rect.x, self.rect.y)
+        bullet_group.add(bullet)
+        all_sprites.add(bullet)
+
+
+class Crawler(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y):
+        super().__init__(enemy_group, all_sprites)
+        self.speed = 10
+        self.image = pygame.transform.scale(load_image("units/crawler.png"), (50, 50))
+        self.orig = self.image
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
         dx = (ind_x - index_player_x) * tile_width
         dy = (ind_y - index_player_y) * tile_height
         self.rect.x += dx
         self.rect.y += dy
+        self.flag = True
+        self.flag_check = False
+        self.fn_left = None
+        self.fn_right = None
+        self.fn_top = None
+        self.fn_bottom = None
+        self.core = None
 
     def update(self):
-        # Find direction vector (dx, dy) between enemy and player.
-        dx, dy = player.rect.x + player.rect.w // 2 - (
-                self.rect.x + self.rect.w // 2), player.rect.y + player.rect.h // 2 - (
-                         self.rect.y + self.rect.h // 2)
-        dist = math.hypot(dx, dy)
+        if t := pygame.sprite.spritecollideany(self, invisible_group):
+            col_x = t.rect.x
+            col_y = t.rect.y
+            if col_x > self.rect.x:
+                self.rect.x -= col_x - self.rect.x
+            if col_x < self.rect.x:
+                self.rect.x += self.rect.x - col_x
+            # self.rect.x += self.rect.x + 0.5 * self.t
+            # self.t *= -1
+        core_x, core_y = get_pos_core()
+        self.core = board.industry_map[core_x][core_y]
+        self.move_to_base()
+        self.rotate(core_x, core_y)
+
+    def rotate(self, core_x, core_y):
+        rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def move_to_base(self):
+        dx, dy = (self.core.rect.x + self.core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  self.core.rect.y + self.core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+        dist = (math.hypot(dx, dy))
+        if dist < 150:
+            return
         if dist != 0:
-            dx, dy = dx / dist, dy / dist  # Normalize.
-        # Move along this normalized vector towards the player at current speed.
+            dx, dy = dx / dist, dy / dist
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            if self.flag:
+                self.flag = not self.flag
+                self.fn_left = InvsibleFinder(self.rect.x, self.rect.y, -1000)
+                self.fn_right = InvsibleFinder(self.rect.x, self.rect.y, 1000)
+            if pygame.sprite.spritecollideany(self.fn_left, invisible_group):
+                if self.fn_left.check_positon() and self.fn_left.check_positon():
+                    if self.fn_left.rect.x > self.fn_right.rect.x:
+                        dx, dy = (abs(self.rect.x - self.fn_left.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_left.rect.y) - self.rect.y)
+                    else:
+                        dx, dy = (abs(self.rect.x - self.fn_right.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_right.rect.y) - self.rect.y)
+                    dist = (math.hypot(dx, dy))
+                    if dist != 0:
+                        dx, dy = dx / dist, dy / dist
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
+        else:
+            self.rect.x += dx * self.speed
+            self.rect.y += dy * self.speed
+
+    def attack(self, target):
+        ...
+
+    def range(self):
+        color = (100, 100, 100, 255)
+        t = pygame.draw.circle(screen, color, (self.rect.center), 100, 1)
+        for i in industry_tiles_group:
+            if pygame.Rect.colliderect(i.rect, t):
+                # i.hp -= self.damage
+                self.speed = 0
+                # if i.hp == 0:
+                    # self.speed = 10
+
+
+class Nova(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y):
+        super().__init__(enemy_group, all_sprites)
+        self.speed = 10
+        self.image = pygame.transform.scale(load_image("units/nova.png"), (50, 50))
+        self.orig = self.image
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = WIDTH // 2 - template_player_x % 32, HEIGHT // 2 - template_player_y % 32
+        dx = (ind_x - index_player_x) * tile_width
+        dy = (ind_y - index_player_y) * tile_height
+        self.rect.x += dx
+        self.rect.y += dy
+        self.flag = True
+        self.flag_check = False
+        self.fn_left = None
+        self.fn_right = None
+        self.fn_top = None
+        self.fn_bottom = None
+
+    def update(self):
+        if t := pygame.sprite.spritecollideany(self, invisible_group):
+            col_x = t.rect.x
+            col_y = t.rect.y
+            if col_x > self.rect.x:
+                self.rect.x -= col_x - self.rect.x
+            if col_x < self.rect.x:
+                self.rect.x += self.rect.x - col_x
+            # self.rect.x += self.rect.x + 0.5 * self.t
+            # self.t *= -1
+        core_x, core_y = get_pos_core()
+        self.core = board.industry_map[core_x][core_y]
+        self.move_to_base()
+        self.rotate(core_x, core_y)
+
+    def rotate(self, core_x, core_y):
+        rel_x, rel_y = core_x - (self.rect[0] + self.rect[2] // 2), core_y - (self.rect[1] + self.rect[3] // 2)
+        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+        self.image = pygame.transform.rotate(self.orig, int(angle) - 135)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def move_to_base(self):
+        dx, dy = (self.core.rect.x + self.core.rect.w // 2 - (self.rect.x + self.rect.w // 2),
+                  self.core.rect.y + self.core.rect.h // 2 - (self.rect.y + self.rect.h // 2))
+        dist = (math.hypot(dx, dy))
+        if dist < 150:
+            return
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            if self.flag:
+                self.flag = not self.flag
+                self.fn_left = InvsibleFinder(self.rect.x, self.rect.y, -1000)
+                self.fn_right = InvsibleFinder(self.rect.x, self.rect.y, 1000)
+            if pygame.sprite.spritecollideany(self.fn_left, invisible_group):
+                if self.fn_left.check_positon() and self.fn_left.check_positon():
+                    if self.fn_left.rect.x > self.fn_right.rect.x:
+                        dx, dy = (abs(self.rect.x - self.fn_left.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_left.rect.y) - self.rect.y)
+                    else:
+                        dx, dy = (abs(self.rect.x - self.fn_right.rect.x) - self.rect.x,
+                                  abs(self.rect.y - self.fn_right.rect.y) - self.rect.y)
+                    dist = (math.hypot(dx, dy))
+                    if dist != 0:
+                        dx, dy = dx / dist, dy / dist
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
+        else:
+            self.rect.x += dx * self.speed
+            self.rect.y += dy * self.speed
+
+    def range(self):
+        color = (100, 100, 100, 255)
+        t = pygame.draw.circle(screen, color, (self.rect.center), 100, 1)
+        for i in industry_tiles_group:
+            if pygame.Rect.colliderect(i.rect, t):
+                # i.hp -= self.damage
+                self.speed = 0
+                # if i.hp == 0:
+                    # self.speed = 10
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y, target):
+        super().__init__(bullet_group, all_sprites)
+        self.image = load_image("bullet.png")
+        self.orig = self.image
+        self.speed = 10
+        self.rect = self.image.get_rect()
+        self.rect.x = ind_x
+        self.rect.y = ind_y
+        self.target = target
+
+
+class InvsibleFinder(pygame.sprite.Sprite):
+    def __init__(self, ind_x, ind_y, x):
+        super().__init__(invisible_finder, all_sprites)
+        self.image = pygame.transform.scale(load_image("bullet_invisible.png"), (25, 25))
+        self.orig = self.image
+        self.speed = 50
+        self.rect = self.image.get_rect()
+        self.rect.x = ind_x
+        self.rect.y = ind_y
+        self.delta_x = x
+
+    def update(self):
+        self.move_to(self.rect.x + self.delta_x, self.rect.y)
+
+    def check_positon(self):
+        if self.speed == 0:
+            return True
+        return False
+
+    def move_to(self, x, y):
+        dx, dy = (x - self.rect.x,
+                  y - self.rect.y)
+        dist = (math.hypot(dx, dy))
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
         self.rect.x += dx * self.speed
         self.rect.y += dy * self.speed
-
-    '''
-    def folow_core(self):
-        LERP_FACTOR = 0.05
-        minimum_distance = 25
-        maximum_distance = 100
-        target_vector = pygame.math.Vector2(*pops)
-        follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
-        new_follower_vector = pygame.math.Vector2(self.rect.x, self.rect.y)
-
-        distance = follower_vector.distance_to(target_vector)
-        if distance > minimum_distance:
-            direction_vector = (target_vector - follower_vector) / distance
-            min_step = max(0, distance - maximum_distance)
-            max_step = distance - minimum_distance
-            step_distance = min_step + (max_step - min_step) * LERP_FACTOR
-            new_follower_vector = follower_vector + direction_vector * step_distance
-
-        return new_follower_vector.x, new_follower_vector.y
-    '''
-
-    def rotate(self):
-        ...
+        if pygame.sprite.spritecollideany(self, invisible_group):
+            self.speed = 0
 
 
 class Button:
@@ -266,6 +587,13 @@ class Button:
             text = font.render(self.text, 1, (0, 0, 0))
             screen.blit(text, (
                 self.x + (self.width / 2 - text.get_width() / 2), self.y + (self.height / 2 - text.get_height() / 2)))
+
+
+class InvisibleWall(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(invisible_group, all_sprites)
+        self.image = load_image("tiles/wall_blocks/dirt-wall2.png")
+        self.rect = self.image.get_rect().move(tile_width * x, tile_height * y)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -1228,6 +1556,10 @@ resource_tiles_group = pygame.sprite.Group()
 industry_tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
+bullet_group = pygame.sprite.Group()
+invisible_group = pygame.sprite.Group()
+invisible_finder = pygame.sprite.Group()
+ranges_group = pygame.sprite.Group()
 
 cursor = pygame.image.load('data/cursor.png')
 menu = pygame.image.load('data/menu/item_menu.png')
@@ -1351,6 +1683,28 @@ blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (1
                   (218, 181, 96),
                   (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
 
+tile_wall = [
+    (196, 100, 64),
+    (141, 141, 141),
+    (120, 101, 92),
+    (130, 125, 233),
+    (126, 38, 66),
+    (218, 181, 96),
+    (69, 32, 32),
+    (174, 180, 196),
+    (225, 228, 201),
+    (92, 86, 122),
+    (225, 233, 240),
+    (153, 94, 154),
+    (82, 82, 92),
+    (146, 94, 70),
+]
+
+# r, g, b
+blocked_blocks = [(0, 0, 0), (196, 100, 64), (141, 141, 141), (120, 101, 92), (130, 125, 233), (126, 38, 66),
+                  (218, 181, 96),
+                  (69, 32, 32), (174, 180, 196), (225, 228, 201), (153, 94, 154), (82, 82, 92), (146, 94, 70)]
+
 # если не знаем какой это пиксель, берём случайный из этих
 default_pixels = [(127, 127, 127), (120, 120, 120), (60, 56, 56)]
 # словарь цветов для руд
@@ -1447,6 +1801,8 @@ start_screen()
 #         core.resources[j] += 1
 
 SPAWN_ENEMY = pygame.USEREVENT + 1
+flag = True
+flag_exit = False
 pygame.time.set_timer(SPAWN_ENEMY, 100)
 CHANGE_CONVEYOR_ANIM = pygame.USEREVENT + 2
 pygame.time.set_timer(CHANGE_CONVEYOR_ANIM, 50)
@@ -1488,6 +1844,27 @@ while True:
         if event.type == LOGIC_UPDATE_ROUTER:
             for el in industry_tiles_group:
                 if type(el) is Router:
+                    el.logic_update()
+
+        if event.type == SPAWN_ENEMY and flag:
+            flag = False
+            spawn_enemy()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            flag_exit = True
+            break
+        if event.type == CHANGE_CONVEYOR_ANIM:
+            current_anim_img_conv = (current_anim_img_conv + 1) % 4
+        if event.type == LOGIC_UPDATE:
+            for el in industry_tiles_group:
+                if type(el) is PneumaticDrill or type(el) is MechanicalDrill:
+                    el.logic_update()
+        if event.type == LOGIC_UPDATE_CONVEYOR:
+            for el in industry_tiles_group:
+                if type(el) is Conveyor:
+                    el.logic_update()
+        if event.type == LOGIC_UPDATE_JUNCTION:
+            for el in industry_tiles_group:
+                if type(el) is Junction:
                     el.logic_update()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # лкм
@@ -1584,6 +1961,7 @@ while True:
     resource_tiles_group.draw(screen)
     industry_tiles_group.update()
     industry_tiles_group.draw(screen)
+    bullet_group.draw(screen)
     enemy_group.update()
     enemy_group.draw(screen)
     player_group.draw(screen)
@@ -1636,3 +2014,6 @@ while True:
 
     pygame.display.flip()
     clock.tick(FPS)
+
+if flag_exit:
+    end_screen()
